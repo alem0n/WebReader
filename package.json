@@ -1,0 +1,26 @@
+{
+  "name": "webreader",
+  "version": "0.9.0",
+  "description": "WebReader 浏览器扩展（TypeScript 多文件重构版，文本转语音 / 屏幕阅读器）",
+  "private": true,
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "watch": "node esbuild.config.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "verify": "npm run typecheck && npm run build",
+    "build:relay": "npm --prefix tts-relay run build",
+    "typecheck:relay": "npm --prefix tts-relay run typecheck",
+    "test:relay": "npm --prefix tts-relay run test",
+    "verify:relay": "npm run typecheck:relay && npm run build:relay && npm run test:relay",
+    "verify:all": "npm run verify && npm run verify:relay",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\""
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "esbuild": "^0.23.0",
+    "jsdom": "^29.1.1",
+    "prettier": "^3.9.7",
+    "typescript": "^5.4.0"
+  }
+}

@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>__MSG_app_title__</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <!-- SVG Icon Sprites（描边加粗，贴合 DESIGN.md 的 mascot 描边风格） -->
+    <svg style="display: none">
+      <defs>
+        <symbol id="icon-voice-panel-up" viewBox="0 0 24 24">
+          <path d="M12 4.5L20.5 19.5H3.5L12 4.5z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" />
+        </symbol>
+        <symbol id="icon-voice-panel-down" viewBox="0 0 24 24">
+          <path d="M12 19.5L3.5 4.5h17L12 19.5z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" />
+        </symbol>
+        <!-- Two Stacked Cards with Play Icon (Paste from clipboard / widget) -->
+        <symbol id="icon-two-pages-play" viewBox="0 0 24 24">
+          <rect x="6.5" y="7.5" width="9" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2" opacity="0.45" />
+          <rect x="4" y="5" width="9" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2" />
+          <path d="M9.5 13.5l2.8-1.7v3.4l-2.8-1.7z" fill="currentColor" />
+        </symbol>
+        <!-- Document with Play Icon (Read entire page) -->
+        <symbol id="icon-document-play" viewBox="0 0 24 24">
+          <path d="M6 2.5h8L20 8.5v13H6V2.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M14 2.5v6h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M15 17l3.5-2v4L15 17z" fill="currentColor"/>
+        </symbol>
+      </defs>
+    </svg>
+
+    <div class="page" id="player-container">
+      <!-- 顶部品牌区 + 导航胶囊 -->
+      <header class="app-header">
+        <div class="app-brand">
+          <img class="app-brand-icon" src="icons/icon48.png" alt="" />
+          <h1 class="app-brand-name">WebReader</h1>
+        </div>
+        <nav class="app-nav">
+          <button id="widget-toggle-btn" class="nav-pill" type="button" title="在当前网页显示/隐藏悬浮窗">
+            <svg class="nav-pill-icon" width="16" height="16" aria-hidden="true">
+              <use href="#icon-two-pages-play"></use>
+            </svg>
+            <span id="widget-toggle-text">显示网页悬浮窗</span>
+          </button>
+          <span id="widget-toggle-status" class="widget-toggle-status hidden"></span>
+          <button id="config-toggle-panel" class="nav-pill nav-pill--key" type="button" title="配置 / 切换语音引擎（MiMo / 后端中转）" aria-expanded="false">
+            <span>⚙</span>
+            <span id="config-toggle-label">配置 / 切换</span>
+          </button>
+          <button id="language-toggle-btn" class="nav-pill" type="button" title="切换界面语言（中 / English）">
+            <span id="language-toggle-label">中 / EN</span>
+          </button>
+        </nav>
+      </header>
+
+      <!-- 快捷操作：阅读整页 / 从剪贴板粘贴（作用于当前标签页） -->
+      <section class="quick-actions" aria-label="快捷操作">
+        <button id="read-page-btn" class="btn btn-primary btn-quick" type="button" title="识别当前网页正文并朗读">
+          <svg class="btn-icon" width="20" height="20" aria-hidden="true">
+            <use href="#icon-document-play"></use>
+          </svg>
+          <span>阅读整页</span>
+        </button>
+        <button id="paste-read-btn" class="btn btn-ghost btn-quick" type="button" title="读取剪贴板内容并朗读">
+          <svg class="btn-icon" width="20" height="20" aria-hidden="true">
+            <use href="#icon-two-pages-play"></use>
+          </svg>
+          <span>从剪贴板粘贴</span>
+        </button>
+      </section>
+
+      <!-- 统一配置面板：引擎切换 + 当前引擎的配置（MiMo Key / 后端中转地址） -->
+      <section id="config-panel" class="panel panel--config hidden">
+        <div class="engine-switch" role="tablist" aria-label="语音引擎">
+          <button id="engine-tab-mimo" class="engine-tab" type="button" role="tab" aria-selected="true" data-engine="mimo">MiMo 直连</button>
+          <button id="engine-tab-relay" class="engine-tab" type="button" role="tab" aria-selected="false" data-engine="relay">后端中转（Edge）</button>
+        </div>
+
+        <div id="mimo-section" class="engine-section">
+          <div class="apikey-form">
+            <div id="apikey-hint-text" class="hint">请填写 MiMo API Key 以开始使用语音朗读。</div>
+            <input
+              type="password"
+              id="apikey-input"
+              class="input"
+              placeholder="粘贴你的 MiMo API Key"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <div class="apikey-actions">
+              <a href="https://platform.xiaomimimo.com/console/api-keys" target="_blank" rel="noopener noreferrer" class="link"
+                >获取 API Key（免费）</a
+              >
+              <button id="apikey-toggle-visibility" type="button" class="btn btn-ghost btn-sm" title="显示/隐藏">👁</button>
+            </div>
+            <button id="apikey-save-btn" class="btn btn-primary" type="button">保存并继续</button>
+          </div>
+        </div>
+
+        <div id="relay-section" class="engine-section hidden">
+          <div class="relay-form">
+            <div class="hint">
+              填写自部署的 TTS 中转后端地址，即可使用 Edge 语音。合成与令牌协议都在后端处理，扩展只走 HTTP 短连接；微软改协议时只需更新后端，扩展无感。详见对应项目 README。
+            </div>
+            <label class="field-label" for="relay-url-input">后端地址</label>
+            <input
+              type="text"
+              id="relay-url-input"
+              class="input"
+              placeholder="https://your-relay.example.com"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <label class="field-label" for="relay-token-input">访问令牌（可选）</label>
+            <input
+              type="password"
+              id="relay-token-input"
+              class="input"
+              placeholder="后端未开启鉴权可留空"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <div id="relay-status" class="relay-status hidden"></div>
+            <div id="relay-error" class="relay-error hidden"></div>
+            <div class="relay-actions">
+              <button id="relay-test-btn" class="btn btn-ghost" type="button">测试连接</button>
+              <button id="relay-save-btn" class="btn btn-primary" type="button">保存并切换</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 全局配置：音色 / 语速 / 开关（与引擎无关，跨 provider 生效） -->
+      <section class="voice-selector panel">
+        <button type="button" class="voice-panel-toggle" id="voice-panel-toggle" aria-expanded="true" title="__MSG_minimize__">
+          <svg class="voice-panel-toggle-icon" width="14" height="14" aria-hidden="true">
+            <use href="#icon-voice-panel-up"></use>
+          </svg>
+        </button>
+        <div class="voice-top-grid">
+          <div class="voice-field-stack">
+            <label class="field-label" for="voice-search" data-i18n-text="voice_controls_search_label"></label>
+            <div class="dropdown-container">
+              <input type="text" id="voice-search" placeholder="__MSG_voice_search_placeholder__" autocomplete="off" />
+              <div id="voice-dropdown" class="dropdown-list hidden"></div>
+            </div>
+          </div>
+          <div class="voice-field-stack voice-field-stack-speed">
+            <label class="field-label" for="speed-select" data-i18n-text="voice_controls_speed_label"></label>
+            <select id="speed-select" class="speed-select"></select>
+          </div>
+        </div>
+
+        <!-- Voice Loading Indicator -->
+        <div id="voice-loading" class="voice-loading hidden">
+          <div class="spinner-small"></div>
+          <span>__MSG_loading_voices__</span>
+        </div>
+
+        <!-- Options Row：开关型配置由 toggle-settings 声明表数据驱动渲染，新增开关自动出现 -->
+        <div class="options-row">
+          <div class="options-row-main">
+            <div class="auto-detect-column" id="toggle-settings-column"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Status Display（状态提示，音色加载 / 错误反馈复用） -->
+      <div class="status-container">
+        <span id="status-text" class="status-text" data-i18n-text="ready">__MSG_ready__</span>
+      </div>
+
+      <!-- Error Message -->
+      <div id="error-message" class="error-message hidden"></div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

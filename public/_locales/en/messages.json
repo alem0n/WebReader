@@ -1,0 +1,206 @@
+{
+   "app_name": {
+      "message": "WebReader"
+   },
+   "app_title": {
+      "message": "WebReader"
+   },
+   "auth_limit_reached": {
+      "message": "Your character limit has been reached. Please contact support."
+   },
+   "auth_login_hint": {
+      "message": "To open the player, please sign in first."
+   },
+   "auth_sign_in_google": {
+      "message": "Sign in with Google"
+   },
+   "auto_detect_language": {
+      "message": "Auto-detect language"
+   },
+   "cancel": {
+      "message": "Cancel"
+   },
+   "click_stop_to_enable": {
+      "message": "To make changes, stop playback first"
+   },
+   "clipboard_empty": {
+      "message": "Clipboard is empty"
+   },
+   "close": {
+      "message": "Close"
+   },
+   "error": {
+      "message": "Error:"
+   },
+   "error_loading_voices": {
+      "message": "Error loading voices:"
+   },
+   "error_playing_audio": {
+      "message": "Error playing audio. Please try again."
+   },
+   "expand": {
+      "message": "Expand"
+   },
+   "failed_to_collect_text": {
+      "message": "Failed to collect text from page"
+   },
+   "failed_to_read_clipboard": {
+      "message": "Failed to read clipboard. Please allow clipboard access."
+   },
+   "google_docs_instructions": {
+      "message": "On Google Docs, automatic page reading is not available. To listen to your document:\n1) Select all text with Ctrl + A.\n2) Copy it with Ctrl + C.\n3) Then click the \"Paste from clipboard\" button below."
+   },
+   "greeting": {
+      "message": "Use WebReader Chrome Extension for fast text to speech as your screen narrator and voice reader on any webpage"
+   },
+   "loading_audio": {
+      "message": "Loading audio..."
+   },
+   "loading_voices": {
+      "message": "Loading voices..."
+   },
+   "minimize": {
+      "message": "Minimize"
+   },
+   "next_sentence": {
+      "message": "Next sentence"
+   },
+   "no_readable_text_found": {
+      "message": "No readable text found in clipboard"
+   },
+   "no_text_found": {
+      "message": "No text found on page to read"
+   },
+   "no_voices_found": {
+      "message": "No voices found"
+   },
+   "open_page_with_text_info": {
+      "message": "To use the reader, please open a normal web page with text (for example, an article or document in the browser) and then click the extension icon again."
+   },
+   "page": {
+      "message": "page"
+   },
+   "pages": {
+      "message": "pages"
+   },
+   "paste_from_clipboard": {
+      "message": "Paste from clipboard"
+   },
+   "paste_text_placeholder_line1": {
+      "message": "Paste text from clipboard or select text on the page"
+   },
+   "pause": {
+      "message": "Pause"
+   },
+   "paused": {
+      "message": "Paused"
+   },
+   "play": {
+      "message": "Play"
+   },
+   "playing": {
+      "message": "Playing"
+   },
+   "please_add_text": {
+      "message": "Please add some text to convert to speech."
+   },
+   "please_select_voice": {
+      "message": "Please select a voice or enable auto-detect."
+   },
+   "previous_sentence": {
+      "message": "Previous sentence"
+   },
+   "read_entire_page": {
+      "message": "Read entire page"
+   },
+   "ready": {
+      "message": "Ready"
+   },
+   "ready_to_listen": {
+      "message": "Ready to listen"
+   },
+   "report_cancel": {
+      "message": "Cancel"
+   },
+   "report_description_label": {
+      "message": "What went wrong?"
+   },
+   "report_description_placeholder": {
+      "message": "What were you doing? What did you expect? What happened instead?"
+   },
+   "report_description_too_short": {
+      "message": "Please describe the problem in at least 10 characters."
+   },
+   "report_error": {
+      "message": "Failed to submit report."
+   },
+   "report_interface_language_label": {
+      "message": "Interface language"
+   },
+   "report_login_required": {
+      "message": "Please sign in to submit a report."
+   },
+   "report_page_url_label": {
+      "message": "Page URL"
+   },
+   "report_problem": {
+      "message": "Report a problem"
+   },
+   "report_problem_title": {
+      "message": "Report a problem"
+   },
+   "report_submit": {
+      "message": "Submit report"
+   },
+   "report_success": {
+      "message": "Thank you! We received your report."
+   },
+   "report_voice_label": {
+      "message": "Voice"
+   },
+   "select_text_to_start": {
+      "message": "Select text to start"
+   },
+   "sign_out": {
+      "message": "Sign out"
+   },
+   "stop": {
+      "message": "Stop"
+   },
+   "stop_and_clear": {
+      "message": "Stop and clear text"
+   },
+   "stopped": {
+      "message": "Stopped"
+   },
+   "then_click_play": {
+      "message": "Then click Play to start"
+   },
+   "toggle_theme": {
+      "message": "Toggle theme"
+   },
+   "tts_pitch": {
+      "message": "Pitch"
+   },
+   "tts_volume": {
+      "message": "Volume (synthesis)"
+   },
+   "unknown": {
+      "message": "Unknown"
+   },
+   "voice_controls_pitch_label": {
+      "message": "Pitch"
+   },
+   "voice_controls_search_label": {
+      "message": "Voice"
+   },
+   "voice_controls_speed_label": {
+      "message": "Speed"
+   },
+   "voice_controls_volume_label": {
+      "message": "Volume"
+   },
+   "voice_search_placeholder": {
+      "message": "Search by name or language"
+   }
+}

@@ -1,0 +1,28 @@
+# 依赖
+node_modules/
+
+# 构建产物
+dist/
+build/
+
+# 日志与临时文件
+*.log
+*.tmp
+*.pid
+.DS_Store
+Thumbs.db
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+
+# Chrome 扩展构建产物
+*.crx
+*.pem
+
+# 测试运行时由 esbuild 现场生成的 bundle（冒烟测试用，不入库）
+test/.*.bundle.mjs
+
+# 临时验证脚本：抓真实页面人工检查采集质量，不纳入提交
+test/real-page.mjs

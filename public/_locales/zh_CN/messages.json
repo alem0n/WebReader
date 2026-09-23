@@ -1,0 +1,197 @@
+{
+   "app_name": {
+      "message": "WebReader"
+   },
+   "app_title": {
+      "message": "WebReader"
+   },
+   "auth_limit_reached": {
+      "message": "您的字符限制已达到。请联系客服。"
+   },
+   "auth_login_hint": {
+      "message": "要打开播放器，请先登录。"
+   },
+   "auth_sign_in_google": {
+      "message": "使用 Google 登录"
+   },
+   "auto_detect_language": {
+      "message": "自动检测语言"
+   },
+   "cancel": {
+      "message": "取消"
+   },
+   "click_stop_to_enable": {
+      "message": "要进行更改，请先停止播放"
+   },
+   "clipboard_empty": {
+      "message": "剪贴板为空"
+   },
+   "close": {
+      "message": "关闭"
+   },
+   "error": {
+      "message": "错误："
+   },
+   "error_loading_voices": {
+      "message": "加载语音时出错："
+   },
+   "error_playing_audio": {
+      "message": "播放音频时出错。请重试。"
+   },
+   "expand": {
+      "message": "展开"
+   },
+   "failed_to_collect_text": {
+      "message": "从页面收集文本失败"
+   },
+   "failed_to_read_clipboard": {
+      "message": "无法读取剪贴板。请允许剪贴板访问。"
+   },
+   "google_docs_instructions": {
+      "message": "在 Google 文档中，无法自动朗读整页。要收听文档内容：\n1) 使用 Ctrl + A 选中全部文本。\n2) 使用 Ctrl + C 复制。\n3) 然后点击下方的“从剪贴板粘贴”按钮。"
+   },
+   "greeting": {
+      "message": "使用 WebReader 浏览器扩展程序进行快速文本转语音，作为屏幕阅读器和语音阅读器在任何网页上使用"
+   },
+   "loading_audio": {
+      "message": "加载音频中..."
+   },
+   "loading_voices": {
+      "message": "加载语音中..."
+   },
+   "minimize": {
+      "message": "最小化"
+   },
+   "next_sentence": {
+      "message": "下一句"
+   },
+   "no_readable_text_found": {
+      "message": "剪贴板中未找到可读文本"
+   },
+   "no_text_found": {
+      "message": "页面上未找到要读取的文本"
+   },
+   "no_voices_found": {
+      "message": "未找到语音"
+   },
+   "page": {
+      "message": "页"
+   },
+   "pages": {
+      "message": "页"
+   },
+   "paste_from_clipboard": {
+      "message": "从剪贴板粘贴"
+   },
+   "paste_text_placeholder_line1": {
+      "message": "从剪贴板粘贴文本或在页面上选择文本"
+   },
+   "pause": {
+      "message": "暂停"
+   },
+   "paused": {
+      "message": "已暂停"
+   },
+   "play": {
+      "message": "播放"
+   },
+   "playing": {
+      "message": "播放中"
+   },
+   "please_add_text": {
+      "message": "请添加一些文本以转换为语音。"
+   },
+   "please_select_voice": {
+      "message": "请选择语音或启用自动检测。"
+   },
+   "previous_sentence": {
+      "message": "上一句"
+   },
+   "read_entire_page": {
+      "message": "阅读整页"
+   },
+   "ready": {
+      "message": "就绪"
+   },
+   "ready_to_listen": {
+      "message": "准备收听"
+   },
+   "report_cancel": {
+      "message": "取消"
+   },
+   "report_description_label": {
+      "message": "出了什么问题？"
+   },
+   "report_description_placeholder": {
+      "message": "您在做什么？您期望什么？实际发生了什么？"
+   },
+   "report_description_too_short": {
+      "message": "请用至少10个字符描述问题。"
+   },
+   "report_error": {
+      "message": "提交报告失败。"
+   },
+   "report_interface_language_label": {
+      "message": "界面语言"
+   },
+   "report_login_required": {
+      "message": "请登录后再提交报告。"
+   },
+   "report_page_url_label": {
+      "message": "页面URL"
+   },
+   "report_problem": {
+      "message": "报告问题"
+   },
+   "report_problem_title": {
+      "message": "报告问题"
+   },
+   "report_submit": {
+      "message": "提交报告"
+   },
+   "report_success": {
+      "message": "谢谢！我们已收到您的报告。"
+   },
+   "report_voice_label": {
+      "message": "语音"
+   },
+   "select_text_to_start": {
+      "message": "选择文本开始"
+   },
+   "sign_out": {
+      "message": "退出登录"
+   },
+   "stop": {
+      "message": "停止"
+   },
+   "stop_and_clear": {
+      "message": "停止并清除文本"
+   },
+   "stopped": {
+      "message": "已停止"
+   },
+   "then_click_play": {
+      "message": "然后点击播放开始"
+   },
+   "toggle_theme": {
+      "message": "切换主题"
+   },
+   "unknown": {
+      "message": "未知"
+   },
+   "voice_controls_pitch_label": {
+      "message": "音调"
+   },
+   "voice_controls_search_label": {
+      "message": "语音"
+   },
+   "voice_controls_speed_label": {
+      "message": "速度"
+   },
+   "voice_controls_volume_label": {
+      "message": "音量"
+   },
+   "voice_search_placeholder": {
+      "message": "按名称或语言搜索"
+   }
+}
