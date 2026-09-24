@@ -54,7 +54,7 @@ let playing = false;
 
 const bundle = resolve(__dirname, '.pep.bundle.mjs');
 await esbuild.build({
-  entryPoints: [resolve(__dirname, '../src/content/player.ts')],
+  entryPoints: [resolve(__dirname, '../src/content/player/index.ts')],
   bundle: true,
   format: 'esm',
   platform: 'browser',
@@ -67,14 +67,15 @@ await esbuild.build({
     {
       name: 'stub',
       setup(build) {
-        build.onResolve({ filter: /^\.\/state$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
-        build.onResolve({ filter: /^\.\/widget$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
-        build.onResolve({ filter: /^\.\/ui$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
-        build.onResolve({ filter: /^\.\/i18n$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
-        build.onResolve({ filter: /^\.\/text-input$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
-        build.onResolve({ filter: /^\.\/voices$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
-        build.onResolve({ filter: /^\.\/utils$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
-        build.onResolve({ filter: /^\.\.\/shared/ }, (args) => ({ path: args.path, namespace: 'stub' }));
+        build.onResolve({ filter: /^\.\.?\/state$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
+        build.onResolve({ filter: /^\.\.?\/widget$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
+        build.onResolve({ filter: /^\.\.?\/ui$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
+        build.onResolve({ filter: /^\.\.?\/i18n$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
+        build.onResolve({ filter: /^\.\.?\/text-input$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
+        build.onResolve({ filter: /^\.\.?\/voices$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
+        build.onResolve({ filter: /^\.\.?\/utils$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
+        // player 子目录深一层：共享模块路径为 ../../shared/*
+        build.onResolve({ filter: /^(\.\.\/)+shared/ }, (args) => ({ path: args.path, namespace: 'stub' }));
         build.onLoad({ filter: /.*/, namespace: 'stub' }, () => ({
           loader: 'js',
           contents: `
