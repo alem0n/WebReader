@@ -1,73 +1,25 @@
-/** voices (migrated from content.js) */
-import { sleep } from './utils';
-import { state } from './state';
-import { getFlagIdForLocale, getTranslatedCountry, getTranslatedGender, getTranslatedLanguageName } from './i18n';
-import { languageNames } from '../shared/language-names';
-import type { PresetVoice } from '../shared/types';
-import { detectLanguage } from '../shared/detect-language';
-import { hideError, setupDisabledTooltips, showError, updateButtonStates, updateClearButton, updatePlayButtonState } from './ui';
-import { loadSettings, saveSettings, syncSpeedSelectFromStored } from './settings';
-import { createContentLogger } from './log';
+/**
+ * 音色列表加载：缓存读写 + 后台预置音色拉取 + 重试。
+ *
+ * 从 voices.ts 拆出（docs/tech-debt.md TD-010）。音色来自 background 的本地
+ * 预置表（无网络请求），结果缓存 24 小时；命中缓存时后台静默刷新，未命中时
+ * 同步加载并重试。加载完成后恢复用户已选音色 / 语速，并对已有正文做一次
+ * 语言检测以回显合适音色。
+ */
+import { state } from '../state';
+import { sleep } from '../utils';
+import { detectLanguage } from '../../shared/detect-language';
+import { hideError, showError, updateButtonStates, updateClearButton, updatePlayButtonState } from '../ui';
+import { loadSettings, saveSettings, syncSpeedSelectFromStored } from '../settings';
+import { createContentLogger } from '../log';
+import { formatVoiceName } from './format';
+import { filterVoices, selectVoice } from './dropdown';
 
 const logger = createContentLogger('voices');
 
 const VOICES_CACHE_KEY = 'tts-voices-cache';
 const VOICES_CACHE_TIMESTAMP_KEY = 'tts-voices-cache-timestamp';
 const VOICES_CACHE_DURATION = 24 * 60 * 60 * 1000;
-
-function formatVoiceDetails(voice: PresetVoice) {
-  const locale = voice.language || '';
-  let languageName = locale;
-  for (const [code, name] of Object.entries(languageNames)) {
-    if (locale.startsWith(code)) {
-      languageName = name;
-      break;
-    }
-  }
-  const parts = locale.split('-');
-  const countryCode = parts.length > 1 ? parts[1].toUpperCase() : null;
-  const countryName = countryCode ? getTranslatedCountry(countryCode) : null;
-  const flagId = getFlagIdForLocale(locale);
-  return { languageName, countryName, flagId };
-}
-
-export function formatVoiceName(voice: PresetVoice) {
-  let language = voice.language || '';
-  let voiceName = voice.name || '';
-
-  // Get full language name (English base) then translate for interface locale
-  let fullLanguageName = language;
-  for (const [code, name] of Object.entries(languageNames)) {
-    if (language.startsWith(code)) {
-      fullLanguageName = getTranslatedLanguageName(name);
-      break;
-    }
-  }
-
-  // Extract voice name without language code, Neural, and Multilingual
-  let displayName = voiceName;
-  // Remove language code prefix (e.g., "en-US-")
-  if (language) {
-    displayName = displayName.replace(new RegExp(`^${language}-`, 'i'), '');
-  }
-  // Remove Neural suffix
-  displayName = displayName.replace(/Neural$/i, '');
-  // Remove Multilingual (wherever it appears)
-  displayName = displayName.replace(/Multilingual/gi, '');
-  // Remove Expressive
-  displayName = displayName.replace(/Expressive/gi, '');
-  // Remove any remaining hyphens at the end and clean up double hyphens
-  displayName = displayName.replace(/-+$/, '').replace(/^-+/, '').replace(/-+/g, '-');
-
-  // Add country in parentheses if available
-  let result = `${fullLanguageName} - ${displayName}`;
-  const { countryName } = formatVoiceDetails(voice);
-  if (countryName) {
-    result += ` (${countryName})`;
-  }
-
-  return result;
-}
 
 export async function clearVoicesCache(reason = 'unknown') {
   try {
@@ -397,163 +349,4 @@ async function loadVoicesFromServer(silent = false, options = {}) {
     }
     throw error;
   }
-}
-
-export function filterVoices(searchTerm: any, _isStrictFilter = false, filterByLanguage = false) {
-  const term = searchTerm.toLowerCase().trim();
-
-  // If no search term and filterByLanguage is true, show voices of selected/displayed language
-  let voiceForLanguage = (state as any).selectedVoice;
-  if (!voiceForLanguage && filterByLanguage && state.voiceSearchInput!.value.trim()) {
-    voiceForLanguage = state.allVoices.find((v) => formatVoiceName(v) === state.voiceSearchInput!.value.trim());
-  }
-  if (!term && filterByLanguage && voiceForLanguage && voiceForLanguage.language) {
-    const selectedLanguage = voiceForLanguage.language.split('-')[0]; // Get base language (e.g., "en" from "en-AU")
-    state.filteredVoices = state.allVoices.filter((voice) => voice.language && voice.language.startsWith(selectedLanguage));
-  } else if (!term) {
-    // Show all voices when no search term
-    state.filteredVoices = [...state.allVoices];
-  } else {
-    // Strict filter: search in name, language, and gender
-    state.filteredVoices = state.allVoices.filter((voice) => {
-      const nameMatch = voice.name?.toLowerCase().includes(term);
-      const languageMatch = voice.language?.toLowerCase().includes(term);
-      const genderMatch = voice.gender?.toLowerCase().includes(term);
-      // Also search in formatted name for better user experience
-      const formattedName = formatVoiceName(voice).toLowerCase();
-      const formattedMatch = formattedName.includes(term);
-      return nameMatch || languageMatch || genderMatch || formattedMatch;
-    });
-  }
-
-  // Sort by language, then by voice name
-  state.filteredVoices.sort((a, b) => {
-    const langA = a.language || '';
-    const langB = b.language || '';
-    if (langA !== langB) {
-      return langA.localeCompare(langB);
-    }
-    if (a.name < b.name) return -1;
-    if (a.name > b.name) return 1;
-    return 0;
-  });
-
-  renderVoiceDropdown();
-}
-
-export function renderVoiceDropdown() {
-  state.voiceDropdown!.innerHTML = '';
-
-  if (state.filteredVoices.length === 0) {
-    const emptyItem = document.createElement('div');
-    emptyItem.className = 'voice-option';
-    emptyItem.style.padding = '15px';
-    emptyItem.style.textAlign = 'center';
-    emptyItem.style.color = '#999';
-    emptyItem.textContent = 'No voices found';
-    state.voiceDropdown!.appendChild(emptyItem);
-    return;
-  }
-
-  state.filteredVoices.slice(0, 100).forEach((voice, index) => {
-    const option = document.createElement('div');
-    option.className = 'voice-option';
-    if ((state as any).selectedVoice && (state as any).selectedVoice.name === voice.name) {
-      option.classList.add('selected');
-    }
-    if (index === state.highlightedIndex) {
-      option.classList.add('highlighted');
-    }
-
-    const nameDiv = document.createElement('div');
-    nameDiv.className = 'voice-option-name';
-    nameDiv.textContent = formatVoiceName(voice);
-
-    const detailsDiv = document.createElement('div');
-    detailsDiv.className = 'voice-option-details';
-    if (voice.gender) {
-      detailsDiv.textContent = getTranslatedGender(voice.gender);
-    }
-
-    option.appendChild(nameDiv);
-    option.appendChild(detailsDiv);
-
-    option.addEventListener('click', (e) => {
-      e.stopPropagation();
-      selectVoice(voice);
-      state.voiceSearchInput!.value = formatVoiceName(voice);
-      updateClearButton();
-      state.isUserTyping = false; // Reset typing flag when selecting a voice
-      state.highlightedIndex = -1; // Reset highlighted index
-      state.voiceDropdown!.classList.add('hidden');
-    });
-
-    state.voiceDropdown!.appendChild(option);
-  });
-
-  // Scroll to highlighted element if needed
-  if (state.highlightedIndex >= 0) {
-    const options = state.voiceDropdown!.querySelectorAll('.voice-option');
-    if (options[state.highlightedIndex]) {
-      options[state.highlightedIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    }
-  }
-}
-
-export function formatVoiceDisplayName(voice: PresetVoice) {
-  if (!voice) return '';
-
-  // Extract short name from full name (e.g., "en-AU-WilliamMultilingualNeural" -> "William")
-  const nameParts = voice.name.split('-');
-  let shortName = nameParts.length > 2 ? nameParts[2] : voice.name;
-
-  // Remove "Multilingual", "Neural" suffixes
-  shortName = shortName.replace(/Multilingual|Neural/g, '').trim();
-
-  // Get language name (e.g., "en-AU" -> "English (Australia)")
-  const langName = voice.language || '';
-
-  // Format: "Language - Name (Gender)"
-  let display = langName;
-  if (shortName) {
-    display += display ? ` - ${shortName}` : shortName;
-  }
-  if (voice.gender) {
-    display += ` (${getTranslatedGender(voice.gender)})`;
-  }
-
-  return display || voice.name; // Fallback to technical name
-}
-
-export function selectVoice(voice: PresetVoice, disableAutoDetect = true) {
-  logger.debug('selectVoice called:', {
-    voice: voice?.name,
-    disableAutoDetect,
-    wasAutoDetect: state.autoDetectLanguage,
-  });
-
-  (state as any).selectedVoice = voice;
-
-  if (disableAutoDetect) {
-    state.autoDetectLanguage = false;
-    if (state.toggleCheckboxes.autoDetectLanguage) state.toggleCheckboxes.autoDetectLanguage.checked = false;
-    logger.debug('Auto-detect disabled by user selection');
-  }
-
-  updatePlayButtonState();
-  // Update tooltips to reflect new state
-  setupDisabledTooltips();
-  saveSettings();
-}
-
-export function updateHighlightedOption() {
-  const options = state.voiceDropdown!.querySelectorAll('.voice-option');
-  options.forEach((option, index) => {
-    if (index === state.highlightedIndex) {
-      option.classList.add('highlighted');
-      option.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    } else {
-      option.classList.remove('highlighted');
-    }
-  });
 }
