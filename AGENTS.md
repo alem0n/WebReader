@@ -2,11 +2,74 @@
 
 本文件是 AI 代理与人类开发者在本仓库工作的**唯一入口约定**：先读这里，再动手。
 配合 `README.md`（怎么用 / 功能事实）、`RULES.md`（代码地图与逐层修改要点）、
-`DESIGN.md`（界面视觉基准）使用；冲突时以本文件为准。
+`DESIGN.md`（界面视觉基准）使用。
+
+**优先级顺序（高 → 低，冲突时高位为准）**：
+
+1. **§0 核心工程原则** —— 全局最高原则，任何设计、代码、文档与之冲突一律以 §0 为准；
+2. 本文件其余各节（§1–§7）—— 项目特化的架构契约、验证要求与 Git 工作流；
+3. `RULES.md` / `README.md` / `DESIGN.md` / `tts-relay/README.md` —— 代码地图与事实基准；
+4. `docs/adr/`（架构决策记录）与 `docs/tech-debt.md`（技术债务登记表）——
+   原则八要求的长期协作媒介。
 
 > **总则：类型安全 + 产物可加载。** 本项目是 Chrome MV3 扩展，`tsc --noEmit` 0 错误
 > （strict 全项开启）与 `npm run build` 产出可加载的 `dist/` 是**每次改动的最低门槛**，
 > 详见 §2、§3。
+
+---
+
+## 0. 核心工程原则（最高原则）
+
+> 以下原则是本仓库的**最高工程准则**，优先级高于本文件其余各节及所有其他文档。
+> 编号沿用来源（缺第 4 / 5 项），引用时写「原则 N」。
+
+### 0.1 原则正文
+
+1. **架构与领域优先**：计划阶段应以理想架构为目标，明确业务目标、领域边界、模块职责、
+   依赖方向和数据流，形成符合领域规律、面向长期维护且可持续演进的设计后再进入编码；
+   不得以短期实现便利牺牲整体设计。设计必须完整，实现应当克制：不做推测性抽象，
+   抽象延迟到第二个真实用例出现时才引入，单一场合直接实现。
+2. **追求优雅的代码模块**：模块应高内聚、低耦合，通过精简且稳定的接口封装内部复杂度，
+   使职责、命名、依赖和扩展方式清晰自然；代码按单一职责拆分，**单个文件不得超过 500 行**，
+   接近上限时应优先重构模块边界。
+3. **保持边界与数据流清晰**：协议模型、领域模型、持久化模型和视图模型不得相互泄漏；
+   数据必须在边界处完成校验和独立转换，避免跨层共享可变状态。
+6. **保障完整前端体验**：前端应控制渲染成本、异步状态和并发请求，保持清晰的 UI 结构；
+   用户流程必须覆盖加载、空状态、错误、重试、反馈和可访问性。
+7. **复用稳定的业务语义**：优先复用已有模块和能力，但不要仅因代码外形相似而过早抽象；
+   确需重复时，必须注释说明其独立演进或暂不抽象的原因。新增依赖前先核查项目已有依赖
+   （根 `package.json` 与 `packages/` workspace）能否满足需求，不得臆断已有库缺少功能——
+   先查阅文档和类型定义；确需引入时优先成熟且维护良好的库，不重复实现通用功能。
+8. **为未来维护者保留上下文**：代码、注释、测试和架构文档是跨越时间的协作媒介。
+   非显然的设计决策、兼容约束、已知缺陷和临时方案，必须记录原因、影响范围、潜在风险
+   及移除条件；技术债务应关联可追踪任务，关键架构决策应同步到 ADR，禁止留下缺少上下文的 TODO。
+9. **确保变更可验证、可观测、可回滚**：每项改动都应行为可测试、运行状态可观测、故障可定位，
+   并兼顾向后兼容和回滚路径；错误与日志必须保留诊断上下文，但不得泄露敏感信息。
+10. **删除优于兼容**：内部路径重构时直接删除过时实现，禁止新增兼容层、deprecated shim
+    或双写逻辑；对外契约（`/api/*` 等稳定接口、数据库迁移）的兼容性按协议契约单独评估，
+    属于合同义务而非迁就旧代码。
+
+### 0.2 原则在本项目中的落地
+
+| 原则 | 本项目执行方式 | 详见 |
+| --- | --- | --- |
+| 1 架构与领域优先 | 动手前先核对 §1.1 设计决策与 `RULES.md` 的分层依赖方向（纯逻辑下沉 `shared/`，两层只留环境胶水）；不得为图快绕过分层铁律 | §1.1 / `RULES.md` |
+| 2 优雅模块 + 500 行上限 | 单文件 > 500 行为硬约束（含 `public/popup.css` 等纯资源文件）；接近 400 行主动规划拆分。现有 8 个超限文件已登记 `docs/tech-debt.md` | §6 / `docs/tech-debt.md` |
+| 3 模型边界不泄漏 | 四类模型到本项目的映射见下表；`shared/**` 只能是纯函数 / 纯类型 / 纯类，不持任何层 state | §0.2 / `RULES.md` |
+| 6 完整前端体验 | 浏览器手动回归清单必须覆盖加载 / 空状态 / 错误 / 重试 / 反馈 / 可访问性，不只是「 happy path 」 | §3 |
+| 7 复用 + 依赖核查 | 本仓库无 `packages/` workspace；新增依赖前先核查根 `package.json`（零运行时依赖、5 个 devDependency）与 `tts-relay/package.json` 能否满足，先查文档与类型定义再决定引入 | §3 / §6 |
+| 8 上下文 + ADR + 债务 | 关键架构决策同步 `docs/adr/`；已知缺陷与临时方案登记 `docs/tech-debt.md`（含原因 / 影响 / 风险 / 移除条件）；TODO 必须带上下文 | §5 / §7 |
+| 9 可验证可观测可回滚 | 每次改动跑 §3 的验证命令；`shared/log.ts` 五级日志保留诊断上下文，但**禁止输出 API Key / 中转 Token 等凭据** | §3 / §6 |
+| 10 删除优于兼容 | §1.2 标注【对外】的契约按合同义务保持兼容（含迁移与回滚路径）；其余内部实现重构时**直接删除并同步调用方**，禁止兼容层 / shim / 双写 | §1.2 |
+
+**四类模型映射（原则 3）**：
+
+| 模型 | 本项目位置 | 边界守则 |
+| --- | --- | --- |
+| 协议模型 | `shared/types.ts`（background 消息联合）+ `tts-relay` 的 `/v1/*` HTTP 契约 | 只描述跨边界协议，不含层内状态；改动即 §1.2 冻结点 |
+| 领域模型 | 句子切分 / 段落单元 / 语言检测 / 音色目录 / TTS 重试分类（`sentence-player` / `extractor` / `sentence-map` / `detect-language` / `tts.ts` 等） | 纯逻辑，不依赖 DOM 与层 state；需要状态就改为参数传入 |
+| 持久化模型 | `shared/settings.ts` + storage 键（`constants.ts`）+ `chrome.storage` 读写 | 键名是面向老用户数据的对外契约；视图层不得绕过存储层直写 storage |
+| 视图模型 | `popup/state.ts` / `content/state.ts`（各含 DOM 引用）+ 各层 `ui.ts` | 两层视图模型互不 import，形状不得泄漏进 `shared` |
 
 ---
 
@@ -61,25 +124,36 @@ esbuild.config.mjs  三入口构建（content / popup / background）+ public �
 | 严格类型 strict 全项 + prettier | `noImplicitAny` / `strictNullChecks` / `useUnknownInCatchVariables` / `noUnusedLocals` / `noUnusedParameters`，`as any` 只允许用于确实无法收窄的 DOM 操作（如 `e.target`） |
 | `getWidget()` 返回 `HTMLElement \| null` | 悬浮窗可能尚未创建，类型必须体现可空；所有调用点据此判空或用可选链 |
 
+> 上表是本项目的**决策日志**（原则八）。**新增关键架构决策时，在 `docs/adr/` 补一条 ADR
+> 并在本表登记链接**；仅调整既有决策的实现细节则更新本表原因列即可。
+
 ### 1.2 契约冻结点（破坏即需同步改调用方）
 
-- **background 消息协议**：`src/shared/types.ts` 的 `BackgroundRequest` / `BackgroundResponse`
+**契约分级（原则十）**：下列冻结点分为两类——
+
+- 标注【对外】的是**对外契约**（用户已安装实例 / 用户数据 / 跨进程 HTTP 协议 / 平台清单）。
+  兼容性是**合同义务**，破坏前必须显式评估迁移与回滚路径（原则九），不得以「内部重构」名义随意破坏；
+- 标注【内部】的是**内部实现**，重构时**直接删除过时实现并同步所有调用方**，
+  禁止留兼容层 / deprecated shim / 双写逻辑（原则十）。
+
+- **background 消息协议**【内部】：`src/shared/types.ts` 的 `BackgroundRequest` / `BackgroundResponse`
   联合类型与 `action` 枚举（`ttsSpeech` / `getPresetVoices` / `saveApiKey` /
   `saveRelayConfig` / `checkRelayStatus` / `switchProvider` / `readEntirePageOnActiveTab` /
   `playTextOnActiveTab` / `toggleWidgetOnActiveTab` / `loadI18nMessages` …）。改结构必须同步
   `background/index.ts` 路由与所有调用点
-- **TTS 配置常量**：`src/shared/constants.ts` 的 `MIMO_API_URL` / `MIMO_MODEL` /
+- **TTS 配置常量**【内部】：`src/shared/constants.ts` 的 `MIMO_API_URL` / `MIMO_MODEL` /
   `MIMO_PRESET_VOICES` / `VOICE_SUPPORTED_LANGS`、`TTS_PROVIDERS`、
   `RELAY_TTS_TIMEOUT_MS` / `MIMO_TTS_TIMEOUT_MS`
-- **storage 键名**：`MIMO_API_KEY_STORAGE`（`mimo_api_key`）、`RELAY_URL_STORAGE`
+- **storage 键名**【对外，等同数据迁移】：`MIMO_API_KEY_STORAGE`（`mimo_api_key`）、`RELAY_URL_STORAGE`
   （`relay_url`）、`RELAY_TOKEN_STORAGE`（`relay_token`）、`TTS_PROVIDER_STORAGE`
   （`tts_provider`）、`LOCAL_STORAGE_SETTINGS_KEY`（`tts-settings`）、音色缓存键
   （`VOICES_CACHE_*`）—— 旧版本用户数据依赖它们
-- **错误响应结构**：`{ success: false, error, status?, code? }` 是前端依赖的契约，
-  `isRetryableTtsError` 依赖其错误分类；中转后端错误码按 `tts-relay/README.md` 映射表对齐
-- **manifest 契约**：`public/manifest.json` 引用的入口文件名
+- **错误响应结构**【内部】：`{ success: false, error, status?, code? }` 是扩展内前端依赖的契约，
+  `isRetryableTtsError` 依赖其错误分类；**与 `tts-relay` 的错误码映射表是【对外】跨进程契约**，
+  双侧改动必须同步发版窗口
+- **manifest 契约**【对外】：`public/manifest.json` 引用的入口文件名
   （`content.js` / `popup.js` / `background.js`）与 `_locales` 目录结构；构建产物路径不可漂移
-- **功能约定**：无登录、三条语音链路、预置音色表 —— 面向用户的事实见 `README.md`
+- **功能约定**【对外】：无登录、三条语音链路、预置音色表 —— 面向用户的事实见 `README.md`
 
 ---
 
@@ -116,6 +190,7 @@ npm run verify:all
 
 | 改动 | 必做 | 说明 |
 | --- | --- | --- |
+| 任意 `src/**` / `tts-relay/src/**` / `public/*.css` | `npm run verify`（后端用 `verify:relay`）+ **行数自检** | 单文件不得超过 500 行（原则 2）；新增文件先规划单一职责，接近 400 行主动拆分；改动已超限文件时把拆分纳入本分支或同步更新 `docs/tech-debt.md` |
 | `src/shared/**` | `npm run verify` | shared 被三入口共同引用，任何改动都需全量构建确认不破坏其它入口 |
 | `src/background/**` | `npm run verify` | 消息路由 / provider / API 代理改动需核对 §1.2 契约与 `README.md` 功能约定 |
 | `src/popup/**` 或 `src/content/**` | `npm run verify` + **浏览器手动回归**（见下）+ 相关 `test/*.smoke.mjs` | 界面层无自动化测试，改动必须人工验证 |
@@ -124,13 +199,21 @@ npm run verify:all
 | `esbuild.config.mjs` / `tsconfig.json` | `npm run verify` | 构建配置改动需确认三入口产物大小与 public 复制完整 |
 | 文案 / i18n | `npm run build` + 手动看界面 | 新功能文案一律写死中文（§1.1），不要新增 `_locales` 键 |
 | 文档（`*.md`） | 至少 `npm run typecheck` | 若文档描述了命令，需实际执行一遍确认命令可用；命令示例必须跨平台可复制（§6） |
-| 依赖变更 | `npm install` 后一并提交 `package-lock.json`，commit body 说明原因 | 不要把 `node_modules/` 带进仓库 |
+| 依赖变更 | **先核查已有依赖能否满足**（根 `package.json` 零运行时依赖 / 5 个 devDependency；`tts-relay/package.json`；原则 7），查文档与类型定义后再 `npm install`；一并提交 `package-lock.json`，commit body 写明核查结论与引入原因 | 不要把 `node_modules/` 带进仓库；MV3 Service Worker / CSP 约束见 §6 |
 
 **浏览器手动回归清单**（popup / content 改动后必跑）：
 选中朗读（划词 → 绿色按钮 / 右键菜单）、整页朗读（悬浮窗 + popup 快捷操作 + 页内悬浮按钮）、
 音色选择与搜索、provider 切换与后端中转配置自检、自动语言检测开关、语速选择、
 「删除括号内容」开关、网页内逐句高亮与点击跳转、本地音色容灾（不填 Key 朗读）、
 API Key 配置与保存、悬浮窗拖拽 / 最小化 / 主题切换、粘贴并朗读。
+
+**完整体验回归（原则 6，每条流程都要覆盖，不只走 happy path）**：
+
+- **加载中**：音色列表 / 正文采集 / 自检按钮的加载态与防重复点击；
+- **空状态**：采集不到正文（引导「粘贴并朗读」）、音色目录为空、剪贴板为空；
+- **错误与重试**：Key 失效 / 网络波动 / 中转自检失败时的可操作文案与重试入口（`isRetryableTtsError` 的分类在界面上要能看出来）；
+- **反馈**：保存成功、provider 切换、开关变更的即时反馈；
+- **可访问性**：按钮与控件有可读名称、焦点可见、键盘可触发。
 
 > **硬性要求**：任何改动都必须实际运行对应验证。**不允许**在未运行 `npm run verify` 的情况下
 > 声称"构建通过"或"类型正确"。界面改动必须在浏览器里真实加载 `dist/` 走一遍回归清单。
@@ -179,7 +262,7 @@ npm run verify
 
 # 4) 分支上完成版本升级（§4.3），独立提交
 git add package.json public/manifest.json
-git commit -m "chore(version): 1.0.3 -> 1.0.4（修复 xxx）"
+git commit -m "chore(version): 0.9.0 -> 0.9.1（修复 xxx）"
 
 # 5) 交付前复核：只包含预期改动
 git log master..HEAD --oneline     # 提交清单
@@ -218,7 +301,7 @@ Refs: AGENTS.md §1.1
 
 ### 4.3 版本号管理
 
-**格式：`主版本.次版本.修复版本`**（三段均为非负整数，当前 `1.0.3`）。
+**格式：`主版本.次版本.修复版本`**（三段均为非负整数，当前 `0.9.0`）。
 唯一来源是根 `package.json` 的 `version` 字段；与 `public/manifest.json` 的 `version`
 保持一致（扩展版本号以 manifest 为准对外，两者必须同步）。
 
@@ -232,7 +315,7 @@ Refs: AGENTS.md §1.1
 执行要求：
 
 - 合并进 `master` 之前，必须在分支上完成版本升级（根 `package.json` + `public/manifest.json`
-  同步），建议独立提交：`chore(version): 1.0.3 -> 1.1.0（新增 xxx 能力）`。
+  同步），建议独立提交：`chore(version): 0.9.0 -> 0.10.0（新增 xxx 能力）`。
 - 提请手动合并时，必须报告"当前版本 → 目标版本"与升级依据。
 - 版本号只增不减，禁止回退或复用已用过的版本号。
 
@@ -249,11 +332,16 @@ Refs: AGENTS.md §1.1
 ## 5. 完成定义（Definition of Done）
 
 - [ ] 改动范围与需求一致，没有顺手改无关文件
-- [ ] 没有破坏 §1.2 的契约冻结点（若必须改，调用方同步修改 + `README.md` 更新）
+- [ ] 没有破坏 §1.2 的契约冻结点（若必须改，调用方同步修改 + `README.md` 更新；【对外】契约另需迁移与回滚路径）
+- [ ] 新增 / 修改文件均 ≤ 500 行；超限已拆分或同步登记 `docs/tech-debt.md`（原则 2）
+- [ ] 重构内部路径时删除了过时实现，未新增兼容层 / deprecated shim / 双写（原则 10）
+- [ ] 代码无缺少上下文的 TODO；临时方案已注明原因与移除条件（原则 8）
+- [ ] 日志 / 错误响应保留诊断上下文，且不含 API Key / 中转 Token 等敏感信息（原则 9）
 - [ ] `npm run typecheck` 0 错误（strict 全项）
 - [ ] `npm run build` 成功，`dist/` 三入口 + 静态资源完整
-- [ ] 界面层改动已在浏览器真实加载 `dist/` 并跑过 §3 的回归清单
+- [ ] 界面层改动已在浏览器真实加载 `dist/` 并跑过 §3 的回归清单（含加载 / 空 / 错误 / 重试 / 反馈 / 可访问性，原则 6）
 - [ ] 文档同步：`README.md`（命令/用法/功能）、`tts-relay/README.md`（中转服务）、`RULES.md`（代码地图）
+- [ ] 关键架构决策已同步 `docs/adr/`；技术债务已登记 `docs/tech-debt.md`（原则 8）
 - [ ] 跨平台检查：代码 / 脚本 / 命令示例遵循 §6
 - [ ] 版本号已按 §4.3 升级（`package.json` + `public/manifest.json` 同步）
 - [ ] 分支已提请用户手动合并（`--no-ff`），分支名 / 验证结果 / 合并命令已交付
@@ -279,6 +367,19 @@ Refs: AGENTS.md §1.1
 - 新增依赖须考虑：MV3 Service Worker 环境（不能用 Node 专属模块）、CSP（不引需要在页面
   注入 inline script 的包）。
 
+**原则硬约束（§0，与上述平台约束并列执行）**：
+
+- **单文件 ≤ 500 行**（原则 2）：含 `.css` 等资源文件；接近 400 行主动规划拆分，
+  超限文件清单与拆分方向见 `docs/tech-debt.md`。
+- **四类模型不泄漏**（原则 3）：协议 / 领域 / 持久化 / 视图模型到本项目的映射见 §0.2；
+  `shared/**` 不得 import 任何层模块、不得持有层 state；视图层不得绕过 `shared/settings` 直写 storage。
+- **依赖先核查再引入**（原则 7）：先查根 `package.json` 与 `tts-relay/package.json` 的已有依赖、
+  官方文档与类型定义，确认都不能满足后才引入成熟且维护良好的库。
+- **日志不泄露敏感信息**（原则 9）：`shared/log.ts` 的输出保留诊断上下文
+  （模块前缀 / 状态码 / 错误分类），但**不得打印 API Key、中转 Token、用户正文全文**。
+- **删除优于兼容**（原则 10）：内部路径重构直接删旧实现并同步所有调用方；
+  兼容只在 §1.2 标注【对外】的契约上按合同义务保留。
+
 ---
 
 ## 7. 已知坑与约束（踩过，别重踩）
@@ -301,3 +402,9 @@ Refs: AGENTS.md §1.1
   缓存 / 播放都在 content / popup 侧；background 不持有可变全局状态，持久化写 `chrome.storage`。
 - **strictNullChecks 下的事件回调**：`e.target` 常需 `as HTMLElement`；
   `catch (e)` 的 `e` 是 `unknown`，属性访问需断言（`useUnknownInCatchVariables` 已开）。
+- **500 行硬约束有存量违规**：`widget.ts`（1750）/ `language-names.ts`（1629）/ `detect-language.ts`（871）/
+  `player.ts`（789）/ `popup.css`（699）/ `index.ts`（699）/ `extractor.ts`（583）/ `ui.ts`（503）超限，
+  已登记 `docs/tech-debt.md`（TD-001…TD-008）。改动这些文件时：本次改动若会继续加行，
+  把拆分放进同一分支；否则至少更新登记的当前行数。
+- **上下文进 ADR 与债务表，不要只留在聊天记录里**（原则 8）：关键架构决策写 `docs/adr/`；
+  已知缺陷 / 临时方案 / 兼容约束写 `docs/tech-debt.md`（含原因 / 影响范围 / 潜在风险 / 移除条件）。
