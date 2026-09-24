@@ -1,0 +1,133 @@
+/* ============================================================
+   统一配置面板：引擎分段 + MiMo Key / 后端中转表单
+   （由 popup.css 按界面分区拆出；popup.html 按原顺序引用，层叠顺序不变）
+   ============================================================ */
+
+.panel--config {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-16);
+}
+
+/* 引擎分段控件：选中态绿色实心（贴纸感） */
+.engine-switch {
+  display: flex;
+  gap: 0;
+  padding: 4px;
+  border-radius: var(--radius);
+  border: 2px solid var(--color-faded-gray);
+  background: var(--color-paper-white);
+}
+
+.engine-tab {
+  flex: 1;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--color-pencil-gray);
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.engine-tab:hover {
+  color: var(--color-charcoal);
+}
+
+.engine-tab[aria-selected='true'] {
+  background: var(--color-eager-green);
+  color: var(--color-paper-white);
+}
+
+/* 引擎配置区 */
+.engine-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-12);
+}
+
+.apikey-form,
+.relay-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-12);
+}
+
+.apikey-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-12);
+}
+
+/* 输入框：透明底 + 2px 描边 */
+.input {
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--radius);
+  border: 2px solid var(--color-faded-gray);
+  background: var(--color-paper-white);
+  color: var(--color-charcoal);
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.input::placeholder {
+  color: var(--color-faded-gray);
+}
+
+.input:focus {
+  border-color: var(--color-spark-blue);
+}
+
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 后端中转状态 */
+.relay-status {
+  font-size: var(--text-caption);
+  line-height: 1.5;
+  border-radius: var(--radius);
+  border: 2px solid var(--color-faded-gray);
+  padding: 8px 10px;
+  color: var(--color-charcoal);
+}
+
+.relay-status--ok {
+  border-color: var(--color-eager-green);
+  background: var(--color-storybook-green);
+  color: var(--color-night-ink);
+}
+
+.relay-status--warn {
+  border-color: var(--color-night-ink);
+  background: var(--color-paper-white);
+  color: var(--color-night-ink);
+}
+
+.relay-status--err {
+  border-color: var(--color-night-ink);
+  background: var(--color-paper-white);
+  color: var(--color-night-ink);
+  font-weight: 700;
+}
+
+.relay-error {
+  font-size: var(--text-caption);
+  color: var(--color-night-ink);
+  font-weight: 700;
+}
+
+.relay-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-12);
+}

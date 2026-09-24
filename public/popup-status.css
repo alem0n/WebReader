@@ -1,0 +1,73 @@
+/* ============================================================
+   状态与错误提示、下拉滚动条、点击高亮、spin 动画
+   （由 popup.css 按界面分区拆出；popup.html 按原顺序引用，层叠顺序不变）
+   ============================================================ */
+
+.status-container {
+  text-align: center;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-16);
+}
+
+.status-text {
+  color: var(--color-pencil-gray);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+.status-text.error {
+  color: var(--color-night-ink);
+  font-weight: 700;
+}
+
+.error-message {
+  padding: var(--spacing-16);
+  background: var(--color-paper-white);
+  border: 2px solid var(--color-night-ink);
+  border-radius: var(--radius);
+  color: var(--color-night-ink);
+  font-size: var(--text-caption);
+  line-height: 1.5;
+  font-weight: 700;
+}
+
+.error-message.hidden {
+  display: none;
+}
+
+/* 滚动条 */
+.dropdown-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dropdown-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dropdown-list::-webkit-scrollbar-thumb {
+  background: var(--color-faded-gray);
+  border-radius: 4px;
+}
+
+.dropdown-list::-webkit-scrollbar-thumb:hover {
+  background: var(--color-pencil-gray);
+}
+
+button,
+input,
+select,
+.checkbox-label {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}

@@ -1,0 +1,323 @@
+/* ============================================================
+   音色 / 语速 / 开关：收起态、下拉、加载指示、复选框
+   （由 popup.css 按界面分区拆出；popup.html 按原顺序引用，层叠顺序不变）
+   ============================================================ */
+
+.voice-selector {
+  position: relative;
+}
+
+.voice-panel-toggle {
+  position: absolute;
+  top: var(--spacing-12);
+  right: var(--spacing-12);
+  z-index: 20;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-pencil-gray);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.voice-panel-toggle:hover {
+  color: var(--color-night-ink);
+  background: var(--color-storybook-green);
+}
+
+.voice-panel-toggle-icon {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+.voice-panel-toggle:focus-visible {
+  outline: none;
+}
+
+/* 收起态：只保留搜索行，标签与开关/语速隐藏 */
+.voice-selector--collapsed .voice-field-stack-speed,
+.voice-selector--collapsed .voice-loading,
+.voice-selector--collapsed .options-row {
+  display: none !important;
+}
+
+.voice-selector--collapsed .voice-top-grid {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.voice-selector--collapsed .voice-field-stack:first-child {
+  flex: none;
+  width: 100%;
+}
+
+.voice-selector--collapsed .voice-field-stack:first-child > .field-label {
+  display: none !important;
+}
+
+/* 收起态：折叠按钮垂直居中到控件行右侧，输入框相应收窄避免被压住 */
+.voice-selector--collapsed .voice-panel-toggle {
+  top: calc(var(--card-padding) + 40px / 2 - 13px);
+}
+
+.voice-selector--collapsed .voice-field-stack:first-child .dropdown-container {
+  max-width: calc(100% - 30px);
+}
+
+.voice-top-grid {
+  display: flex;
+  gap: var(--spacing-8);
+  align-items: stretch;
+}
+
+.voice-field-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.voice-field-stack:first-child {
+  flex: 1;
+}
+
+.voice-field-stack-speed {
+  flex-shrink: 0;
+}
+
+.dropdown-container {
+  position: relative;
+  flex: 1;
+}
+
+#voice-search {
+  width: 100%;
+  box-sizing: border-box;
+  height: 40px;
+  padding: 0 var(--spacing-12);
+  border: 2px solid var(--color-faded-gray);
+  border-radius: var(--radius);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  background: var(--color-paper-white);
+  color: var(--color-charcoal);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+#voice-search::placeholder {
+  color: var(--color-faded-gray);
+}
+
+#voice-search:focus {
+  border-color: var(--color-spark-blue);
+}
+
+#voice-search:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 下拉列表 */
+.dropdown-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  background: var(--color-paper-white);
+  border: 2px solid var(--color-night-ink);
+  border-radius: var(--radius);
+  z-index: 1000;
+}
+
+.dropdown-list.hidden {
+  display: none;
+}
+
+.voice-option {
+  padding: var(--spacing-12);
+  cursor: pointer;
+  border-bottom: 2px solid var(--color-storybook-green);
+  transition: background 0.12s ease;
+}
+
+.voice-option:last-child {
+  border-bottom: none;
+}
+
+.voice-option:hover {
+  background: var(--color-storybook-green);
+}
+
+.voice-option.selected {
+  background: var(--color-storybook-green);
+}
+
+.voice-option-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--color-night-ink);
+}
+
+.voice-option-details {
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  color: var(--color-pencil-gray);
+  margin-top: 2px;
+}
+
+/* 音色加载指示 */
+.voice-loading {
+  margin-top: var(--spacing-12);
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-12);
+  font-size: var(--text-caption);
+  color: var(--color-pencil-gray);
+  background: var(--color-storybook-green);
+  border: 2px solid var(--color-eager-green);
+  border-radius: var(--radius);
+}
+
+.voice-loading.hidden {
+  display: none;
+}
+
+.spinner-small {
+  width: 16px;
+  height: 16px;
+  border: 3px solid rgba(88, 204, 2, 0.3);
+  border-top: 3px solid var(--color-eager-green);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  flex-shrink: 0;
+}
+
+/* Options Row（开关组） */
+.options-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-8);
+  margin-top: var(--spacing-12);
+}
+
+.options-row-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-8);
+}
+
+.auto-detect-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-8);
+  flex: 1;
+  min-width: 0;
+  justify-content: center;
+}
+
+/* 复选框：圆角方块 + 2px 描边，选中绿色实心 */
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-charcoal);
+  user-select: none;
+  padding: 2px 0;
+}
+
+.checkbox-label:hover {
+  color: var(--color-night-ink);
+}
+
+.checkbox-label input[type='checkbox'] {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 2px solid var(--color-faded-gray);
+  border-radius: 8px;
+  background: var(--color-paper-white);
+  position: relative;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.checkbox-label input[type='checkbox']:hover {
+  border-color: var(--color-eager-green);
+}
+
+.checkbox-label input[type='checkbox']:checked {
+  background: var(--color-eager-green);
+  border-color: var(--color-eager-green);
+}
+
+.checkbox-label input[type='checkbox']:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 5px;
+  height: 10px;
+  border: solid var(--color-paper-white);
+  border-width: 0 3px 3px 0;
+  transform: rotate(45deg);
+}
+
+.checkbox-label input[type='checkbox']:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.checkbox-label:has(input:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 语速下拉 */
+.speed-select {
+  box-sizing: border-box;
+  height: 40px;
+  padding: 0 10px;
+  border: 2px solid var(--color-faded-gray);
+  border-radius: var(--radius);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  background: var(--color-paper-white);
+  color: var(--color-charcoal);
+  cursor: pointer;
+  min-width: 92px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.speed-select option {
+  background: var(--color-paper-white);
+  color: var(--color-charcoal);
+  padding: 8px;
+}
+
+.speed-select:focus {
+  border-color: var(--color-spark-blue);
+}
+
+.speed-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -1,0 +1,78 @@
+/* ============================================================
+   按钮（Primary CTA / Outlined）+ 快捷操作区
+   （由 popup.css 按界面分区拆出；popup.html 按原顺序引用，层叠顺序不变）
+   ============================================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-8);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+
+/* Primary CTA：实心绿 + 白字 + 无描边（颜色本身即按钮） */
+.btn-primary {
+  background: var(--color-eager-green);
+  color: var(--color-paper-white);
+  border: 2px solid var(--color-eager-green);
+  font-size: var(--text-nav-label);
+  letter-spacing: var(--tracking-nav-label);
+  text-transform: uppercase;
+  padding: 12px var(--spacing-16);
+}
+
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+/* Outlined / Ghost：透明底 + 2px 描边 + 蓝字 */
+.btn-ghost {
+  background: transparent;
+  color: var(--color-spark-blue);
+  border: 2px solid var(--color-faded-gray);
+  font-size: 14px;
+  padding: 8px var(--spacing-16);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  border-color: var(--color-spark-blue);
+}
+
+.btn-sm {
+  padding: 6px var(--spacing-12);
+  font-size: var(--text-caption);
+}
+
+/* 快捷操作区：阅读整页 / 从剪贴板粘贴 */
+.quick-actions {
+  display: flex;
+  gap: var(--spacing-12);
+}
+
+.btn-quick {
+  flex: 1 1 0;
+  padding: 12px var(--spacing-12);
+  font-size: 14px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.btn-icon {
+  flex: 0 0 auto;
+  fill: currentColor;
+  pointer-events: none;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
