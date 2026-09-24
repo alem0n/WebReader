@@ -3,6 +3,8 @@
 本文给出 WebReader 的代码地图与逐层修改要点。**流程性约定（分支 / 验证命令 /
 版本号 / 手动合并）以 `AGENTS.md` 为唯一入口**，本文不重复。
 
+**最高准则是 `AGENTS.md` §0《核心工程原则》**：本文任何条目与之冲突，一律以 §0 为准。
+
 ---
 
 ## 项目概述
@@ -11,6 +13,12 @@ WebReader：浏览器网页朗读扩展（Chrome MV3）。四层结构 + 一个�
 
 一句话架构：**纯逻辑全部下沉 `shared/`，content 与 popup 只保留各自的环境胶水层
 （state / DOM / 事件），background 只做 provider 路由、消息代理与凭据管理。**
+
+**模型边界（原则 3）**：协议模型（`shared/types.ts` 的消息联合 + `tts-relay` 的 `/v1/*`
+HTTP 契约）、领域模型（句子切分 / 正文采集 / 语言检测 / 音色目录 / TTS 重试分类）、
+持久化模型（`shared/settings.ts` + storage 键 + `chrome.storage`）、视图模型
+（`popup` / `content` 各自的 `state.ts` + `ui.ts`）四类**不得互相泄漏**；
+完整映射表与边界守则见 `AGENTS.md` §0.2，本文各层「修改要点」即按此边界展开。
 
 ## 开发环境
 
@@ -52,6 +60,9 @@ src/background   src/popup     src/content
 - `content` 与 `popup` 之间**不得互相 import**；需要同一份逻辑就下沉到 `shared/`。
 - 扩展端与 `tts-relay` 之间**只有 HTTP 短连接**（`POST /v1/tts` / `GET /v1/voices` /
   `GET /v1/health`）；WebSocket 私有协议与令牌漂移全部收在后端，扩展端不得引入 WS 客户端。
+- **单文件 ≤ 500 行**（原则 2）：现有 8 个超限文件（`content/widget.ts` 1750 行最严重）
+  见 `docs/tech-debt.md`；本层新增模块先规划单一职责，接近 400 行主动拆分，
+  不要在超限文件上继续堆叠功能。
 
 ---
 
@@ -247,3 +258,11 @@ src/background   src/popup     src/content
 - 扩展代码（background / content / popup）**只用 `chrome.*` 与 Web API**，
   禁止任何 Node 专属模块；
 - 不硬编码绝对路径；资源路径走 `chrome.runtime.getURL()`。
+
+**原则硬约束（摘要，详见 `AGENTS.md` §0 / §6）**：
+
+- 单文件 ≤ 500 行（原则 2），超限文件清单与拆分方向见 `docs/tech-debt.md`；
+- 四类模型不互相泄漏，`shared/**` 不持层 state、不 import 层模块（原则 3）；
+- 新增依赖前先核查已有依赖 + 官方文档 + 类型定义（原则 7）；
+- 日志保留诊断上下文，禁止输出 API Key / 中转 Token（原则 9）；
+- 内部路径重构直接删除过时实现并同步调用方，兼容只在 `AGENTS.md` §1.2 标注【对外】的契约上保留（原则 10）。
