@@ -18,7 +18,7 @@ const root = resolve(__dirname, '..');
 
 const outfile = resolve(__dirname, '.detect-language.bundle.mjs');
 await esbuild.build({
-  entryPoints: [resolve(root, 'src/shared/detect-language.ts')],
+  entryPoints: [resolve(root, 'src/shared/detect-language/index.ts')],
   bundle: true,
   format: 'esm',
   platform: 'browser',
