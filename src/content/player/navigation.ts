@@ -8,7 +8,6 @@ import { state } from '../state';
 import type { PresetVoice } from '../../shared/types';
 import { showLoading, showError, updateButtonStates, estimateTotalDuration } from '../ui';
 import { debounce } from '../../shared/utils';
-import { detectLanguage } from '../../shared/detect-language';
 import { createContentLogger } from '../log';
 import { onSentenceChanged } from './entire-page';
 import { playSentenceChunk } from './chunk';
@@ -87,23 +86,10 @@ export function jumpToSentence(targetSentenceIndex: number): void {
   logger.debug(`Moved to sentence ${targetSentenceIndex}`);
   onSentenceChanged(targetSentenceIndex);
 
-  let voice = state.selectedVoice;
-  if (state.autoDetectLanguage) {
-    const text = (state.textContent!.textContent || state.textContent!.innerText || '').trim();
-    const detectedLang = detectLanguage(text);
-    if (detectedLang) {
-      const langPrefix = detectedLang.split('-')[0];
-      const voicesForLang = state.allVoices.filter(
-        (v) =>
-          v.language &&
-          (v.language === detectedLang ||
-            v.language.startsWith(detectedLang + '-') ||
-            (v.language.startsWith(langPrefix + '-') && !v.language.startsWith('fil-')))
-      );
-      if (voicesForLang.length > 0) voice = voicesForLang[0];
-    }
-  }
-
+  // 直接复用开始播放时落实的已选音色（单一来源）：autoDetect 模式下
+  // handlePlayPause 已按正文检测并写入 state.selectedVoice，跳转不重复检测，
+  // 与开始播放用同一个音色
+  const voice = state.selectedVoice;
   if (!voice) return;
 
   // Capture current request ID for this navigation

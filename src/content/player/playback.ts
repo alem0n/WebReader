@@ -13,9 +13,7 @@ import { state } from '../state';
 import { i18n } from '../i18n';
 import { showLoading, showError, hideError, updateStatusText, updateButtonStates, disableButtons, resetPlayerState } from '../ui';
 import { AudioCacheManager } from '../../shared/audio-cache';
-import { detectLanguage } from '../../shared/detect-language';
 import { reloadToggleSettings, readTtsProvider } from '../settings';
-import { formatVoiceName } from '../voices';
 import { applyParentheticalFilter } from '../utils';
 import { getDisplayTextFromMap } from '../sentence-map';
 import { prepareReadingOverlay, clearReadingOverlay } from '../reading-overlay';
@@ -23,6 +21,7 @@ import * as localTts from '../../shared/local-tts';
 import { createContentLogger } from '../log';
 import { refreshMapIfStale } from './entire-page';
 import { playSentenceChunk } from './chunk';
+import { resolveVoiceForText } from '../voices/voice-selection';
 
 const logger = createContentLogger('player');
 
@@ -93,39 +92,9 @@ export async function handlePlayPause() {
   try {
     hideError();
 
-    let voiceToUse = state.selectedVoice;
-    if (state.autoDetectLanguage) {
-      const detectedLang = detectLanguage(text);
-      // 检测为空（如拉丁短文本）时按脚本回退：含汉字→中文，否则英文
-      const langToUse = detectedLang || (/[\u4E00-\u9FFF\u3400-\u4DBF]/.test(text) ? 'zh-CN' : 'en-US');
-      if (langToUse) {
-        const langPrefix = langToUse.split('-')[0];
-        const voicesForLang = state.allVoices.filter(
-          (v) =>
-            v.language &&
-            (v.language === langToUse ||
-              v.language.startsWith(langToUse + '-') ||
-              (v.language.startsWith(langPrefix + '-') && !v.language.startsWith('fil-')))
-        );
-        if (voicesForLang.length > 0) {
-          voiceToUse = voicesForLang[0];
-          logger.debug(
-            `Using language: ${langToUse} (${detectedLang ? 'auto-detected' : 'interface fallback for short text'}), voice: ${voiceToUse.name}`
-          );
-
-          if (state.voiceSearchInput) {
-            state.voiceSearchInput.value = formatVoiceName(voiceToUse);
-          }
-        } else if (state.allVoices.length > 0) {
-          // 检测到的语言没有匹配音色（MiMo 仅提供中英文音色），回退到默认音色（支持中英文）
-          voiceToUse = state.allVoices.find((v) => v.voice === 'mimo_default') || state.allVoices[0];
-          logger.debug(`Using language: ${langToUse} has no matching voice, falling back to: ${voiceToUse.name}`);
-          if (state.voiceSearchInput) {
-            state.voiceSearchInput.value = formatVoiceName(voiceToUse);
-          }
-        }
-      }
-    }
+    // 自动检测开启时由此函数统一选音色（检测 + 脚本回退 + 无匹配音色回退），
+    // 点击跳转也走同一函数，两处语义一致
+    const voiceToUse = resolveVoiceForText(text);
 
     if (!voiceToUse) {
       showError(i18n('please_select_voice'));

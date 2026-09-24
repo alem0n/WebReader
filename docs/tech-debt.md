@@ -10,6 +10,7 @@ WebReader 的已知缺陷、临时方案与待清理项。每条写明**原因 /
 
 原 TD-001…TD-009 已全部解决（含复核时新发现并一并清理的 TD-010）。
 **截至当前版本，全仓库 130 个 `ts` / `css` 源文件已全部 ≤ 500 行，原则 2 清零。**
+TD-011 是音色状态机修复时发现的 popup 层同源缺陷，未修（见下）。
 
 | ID | 主题 | 原登记行数 | 实测行数 | 拆分后 | 解决提交 |
 | --- | --- | --- | --- | --- | --- |
@@ -23,6 +24,7 @@ WebReader 的已知缺陷、临时方案与待清理项。每条写明**原因 /
 | TD-008 | `content/ui.ts` 超限 | 503 | 503 | `ui/` 7 文件，最大 316 | `6e7ca42` |
 | TD-009 | `PresetVoice.gender` 注释过时 | — | — | 注释修正 | `1f6ed71` |
 | TD-010 | `content/voices.ts` 超限（漏登） | — | 560 | `voices/` 4 文件，最大 353 | `35cb101` |
+| TD-011 | popup 层音色状态机同源缺陷（未修） | — | — | 见 TD-011 条目 | 待后续分支 |
 
 > 「原登记行数」来自本表旧版本；**实测行数**用正确方法重新统计（见下节），
 > 多数条目被低估。此后登记行数一律以实测为准。
@@ -132,6 +134,22 @@ require('fs').readFileSync(path, 'utf8').split('\n').length;
   `format ← dropdown ← loader`。
 - **保真**：11 个函数（含 3 个私有）全部一致。
 
+### TD-011 — popup 层音色状态机与 content 层同源缺陷（未修，待后续）
+
+- **现象**：popup 层同样把「自动检测」与「已选音色」做成交斥：`popup/index.ts:64`
+  （autoDetect 开启 → `selectedVoice = null`）与 `popup/voices.ts:68`（加载后
+  autoDetect 开启 → `selectedVoice = null`），以及清除按钮置空后 autoDetect 仍关闭
+  的不自洽态（与 content 修复前完全同构）。
+- **为何本次不修**：popup 无网页内点击跳转，该缺陷不产生「整页点击跳转失效」这类
+  现象；且 popup 层无自动化测试覆盖，改动必须浏览器手动回归（`AGENTS.md` §3），
+  与本次 content 层修复混在同一分支会扩大回归面。
+- **影响范围**：popup 主界面的音色下拉选中态 / 语言过滤 / 「清除后未重开自动检测
+  则播放报请选择音色」的脆弱性。
+- **潜在风险**：popup 与 content 是两套独立 state（`AGENTS.md` §7），不能共享修复；
+  硬套 content 的 `resolveVoiceForText` 会引入 popup 未覆盖的检测分支。
+- **移除条件**：按 content 层同一设计（`selectedVoice` 单一来源 + autoDetect 只决定
+  产生方式）重写 popup 选音色路径，并完成 popup 浏览器手动回归后删除本条。
+
 ---
 
 ## 拆分后仍须遵守的隐性契约（改动这些模块前必读）
@@ -151,6 +169,14 @@ require('fs').readFileSync(path, 'utf8').split('\n').length;
   被剔除的括号内容仍在 span 内（随句高亮但不朗读）——不要用 `map.sentences` 长度
   断言 span 长度（见 `test/inline-reading.smoke.mjs` 的幂等用例）。
 - **`detect-language` 的既有输出不得借重构修正**（见 TD-003）。
+- **`state.selectedVoice` 是「当前要使用的音色」的单一来源**（content 层）：音色列表
+  加载完成且有正文后不为 null。`autoDetectLanguage` 只决定它由检测产生还是用户手选——
+  开启时由 `voices/voice-selection.resolveVoiceForText` 在「开始播放 / 开关开启 /
+  加载完成且有正文」时检测并写入（含「检测为空脚本回退」与「无匹配音色回退
+  mimo_default」两道兜底）；关闭时是用户手选值。`navigation.jumpToSentence`、
+  下拉选中态（`dropdown.renderVoiceDropdown`）、语言过滤（`filterVoices`）一律只读
+  `selectedVoice`，**不得重新检测**。任何「autoDetect 开启就置 `selectedVoice = null`"
+  的写法都是本设计的反面（曾导致整页朗读点击跳转失效）。
 
 ## 关联
 

@@ -65,7 +65,12 @@ export function bindVoiceSearch(rootGetById: (id: string) => any): void {
     e.stopPropagation();
     e.preventDefault();
     state.voiceSearchInput!.value = '';
+    // 清除指定 = 回到自动检测模式：selectedVoice 交回自动检测，在开始朗读时
+    // 按正文落实。避免「selectedVoice 为空且自动检测关闭」的不自洽态 ——
+    // 那样播放会报「请选择音色」，且点击跳转拿不到音色
     state.selectedVoice = null;
+    state.autoDetectLanguage = true;
+    if (state.toggleCheckboxes.autoDetectLanguage) state.toggleCheckboxes.autoDetectLanguage.checked = true;
     saveSettings();
     updateClearButton();
     state.isUserTyping = false; // Reset typing flag when clearing

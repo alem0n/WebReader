@@ -180,12 +180,22 @@ src/background   src/popup     src/content
   **拼接顺序即级联顺序，不得随意调换段落顺序**）。
 - `ui/` — 按钮状态 / 禁用提示 / 拖拽 / 高亮 / 主题（screens / drag / time-progress /
   text-highlight / controls / tooltips，`index.ts` 再导出 23 个公共符号）。
-- `player/` — 播放控制：`playback`（开始播放三态判定）/ `chunk`（MiMo 路径 Web Audio
+- `player/` — 播放控制：`playback`（开始播放三态判定；autoDetect 开启时调
+  `voices/voice-selection.resolveVoiceForText` 落实音色单一来源）/ `chunk`（MiMo 路径 Web Audio
   与本地容灾 speechSynthesis 双分支的单句循环）/ `navigation`（上一句 / 下一句 /
-  跳转，防抖 + 请求作废）/ `entire-page`（整页收集与句子映射生命周期）/
+  跳转，防抖 + 请求作废；跳转直接复用 `state.selectedVoice`，不重复检测）/ `entire-page`（整页收集与句子映射生命周期）/
   `stop-clear` / `paste`（粘贴并朗读 + Google Docs 引导）/ `scroll`。
 - `voices/` — 音色加载 / 过滤 / 搜索 / 下拉 / 选择（`loader` 缓存与拉取 + `dropdown`
-  过滤 / 渲染 / 选择 + `format` 显示格式化纯函数；悬浮窗内，目录随 provider 切换）。
+  过滤 / 渲染 / 选择 + `format` 显示格式化纯函数 + `voice-selection` 自动检测
+  选音色；悬浮窗内，目录随 provider 切换）。
+  - **不变式：`state.selectedVoice` 是「当前要使用的音色」的单一来源**，音色列表
+    加载完成且有正文后不为 null。`autoDetectLanguage` 只决定它由检测产生还是
+    用户手选：开启时由 `voice-selection.resolveVoiceForText` 在「开始播放 /
+    开关开启 / 加载完成且有正文」时检测并**写入** `selectedVoice`（含「检测为空
+    脚本回退」与「无匹配音色回退 mimo_default」两道兜底）；关闭时是用户手选值。
+    `navigation.jumpToSentence` 与下拉选中态 / 语言过滤一律只读 `selectedVoice`，
+    不得重新检测——跳转重新检测曾导致整页朗读点击跳转失效。清除按钮 = 回到
+    自动检测（避免「selectedVoice 为空且自动检测关闭」的不自洽态）。
 - `selection.ts` — 划词后的绿色朗读按钮（Shadow DOM 注入样式，跟随左键抬起位置）。
 - `text-input.ts` — 选中朗读 / 粘贴预处理（去 HTML 标签 / 方括号）。
 - `page-fab.ts` — 页面内「朗读整页」悬浮按钮：可拖动 + 3 秒无点击自动吸附边缘，
