@@ -43,7 +43,7 @@ globalThis.NodeFilter = dom.window.NodeFilter;
 
 const outfile = resolve(__dirname, '.extractor.bundle.mjs');
 await esbuild.build({
-  entryPoints: [resolve(__dirname, '../src/content/extractor.ts')],
+  entryPoints: [resolve(__dirname, '../src/content/extractor/index.ts')],
   bundle: true,
   format: 'esm',
   platform: 'browser',
