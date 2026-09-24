@@ -123,6 +123,19 @@ await esbuild.build({
             export function subtractCharRanges(start, end) { return [{ start, end }]; }
             export function mergeCharRanges(r) { return r; }
             export function detectLanguage() { return null; }
+            export function createLogger() { return { debug() {}, info() {}, warn() {}, error() {} }; }
+            export function debounce(fn) { return fn; }
+            export function limitFloat(n) { return n; }
+            export async function persistSettings() {}
+            export async function readSettings() { return {}; }
+            export const TOGGLE_SETTINGS = [];
+            // shared/local-tts 命名空间导入（player 以 * as localTts 调用）
+            export function cancel() {}
+            export function canSpeak() { return false; }
+            export function pause() {}
+            export function resume() {}
+            export function speak() { return true; }
+            export function normalizeLang(l) { return l; }
             export class AudioCacheManager { constructor() {} clear() {} }
             // sentence-map 复用的切分管线桩：返回单句数组即可（本测试只验控制流，不验切分）
             export class SentencePlayer {

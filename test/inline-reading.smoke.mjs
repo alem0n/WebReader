@@ -290,12 +290,14 @@ test('findSentenceIndexFromNode 能反查句子下标（点击跳转的预留入
 
 test('重复 prepare 幂等，不重复包裹', () => {
   overlay.prepareReadingOverlay(units, map);
+  const once = [...document.querySelectorAll(`span.${READING_CLASS.sentence}`)].map((s) => s.textContent).join('');
   overlay.prepareReadingOverlay(units, map);
-  const spans = document.querySelectorAll(`span.${READING_CLASS.sentence}`);
-  const rebuilt = [...spans].map((s) => s.textContent).join('');
-  // span 总数应覆盖全部句子文本，且不重复（用长度大致校验不翻倍）
-  const expected = map.sentences.join('').replace(/\s+/g, '');
-  assert.equal(rebuilt.replace(/\s+/g, '').length, expected.length, '重复 prepare 不应翻倍包裹');
+  const twice = [...document.querySelectorAll(`span.${READING_CLASS.sentence}`)].map((s) => s.textContent).join('');
+  // 句子 span 覆盖「合并区间」，含被剔除的括号内容（随本句一起高亮但不朗读，
+  // 见 wrapUnitSentences 的设计），故长度不能直接用 map.sentences 求和；
+  // 幂等性以「重复 prepare 后 span 逐字不变、长度不翻倍」为准
+  assert.equal(twice.replace(/\s+/g, '').length, once.replace(/\s+/g, '').length, '重复 prepare 不应翻倍包裹');
+  assert.equal(twice, once, '两次 prepare 的 span 内容应逐字一致');
   overlay.clearReadingOverlay();
 });
 
