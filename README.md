@@ -84,7 +84,7 @@ npm run verify:all
 
 ```
 ReadAloud-MiMo-TS/
-├── public/          # 静态资源（原样复制到 dist）：manifest / popup.html·css / icons / _locales
+├── public/          # 静态资源（原样复制到 dist）：manifest / popup.html + 7 个 popup-*.css / icons / _locales
 ├── src/
 │   ├── shared/      # 三端共享：类型 / 常量 / 消息封装 / TTS / 音频缓存 / 语言检测 / 设置存储
 │   ├── background/  # Service Worker：MiMo 代理 + 中转客户端 + API Key 管理 + i18n

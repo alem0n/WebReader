@@ -8,124 +8,152 @@ WebReader 的已知缺陷、临时方案与待清理项。每条写明**原因 /
 
 ## 汇总
 
-| ID | 主题 | 违反原则 | 现状（v0.9.0 行数） |
-| --- | --- | --- | --- |
-| TD-001 | `content/widget.ts` 超限 | 原则 2（≤500 行） | 1750 |
-| TD-002 | `shared/language-names.ts` 超限 | 原则 2 | 1629 |
-| TD-003 | `shared/detect-language.ts` 超限 | 原则 2 | 871 |
-| TD-004 | `content/player.ts` 超限 | 原则 2 | 789 |
-| TD-005 | `public/popup.css` 超限 | 原则 2 | 699 |
-| TD-006 | `content/index.ts` 超限 | 原则 2 | 699 |
-| TD-007 | `content/extractor.ts` 超限 | 原则 2 | 583 |
-| TD-008 | `content/ui.ts` 超限 | 原则 2 | 503 |
-| TD-009 | `PresetVoice.gender` 注释过时 | 原则 8（上下文准确） | `shared/types.ts:14` |
+原 TD-001…TD-009 已全部解决（含复核时新发现并一并清理的 TD-010）。
+**截至当前版本，全仓库 130 个 `ts` / `css` 源文件已全部 ≤ 500 行，原则 2 清零。**
 
-> 行数随版本变化，处理前以当前工作区实测为准。全部超限项的共同移除条件：
-> 拆分为单一职责模块后**每个文件 ≤ 500 行**，`npm run verify` 通过，且涉及的界面层
-> 按 `AGENTS.md` §3 跑浏览器手动回归。
+| ID | 主题 | 原登记行数 | 实测行数 | 拆分后 | 解决提交 |
+| --- | --- | --- | --- | --- | --- |
+| TD-001 | `content/widget.ts` 超限 | 1750 | **2020** | `widget/` 8 文件，最大 421 | `a93c6f6` + `52a61de` |
+| TD-002 | `shared/language-names.ts` 超限 | 1629 | 1629 | `language-names/` 21 文件，最大 212 | `ee59693` |
+| TD-003 | `shared/detect-language.ts` 超限 | 871 | 871 | `detect-language/` 7 文件，最大 241 | `94bd687` |
+| TD-004 | `content/player.ts` 超限 | 789 | **905** | `player/` 8 文件，最大 208 | `4ce867b` |
+| TD-005 | `public/popup.css` 超限 | 699 | **820** | 7 个 `.css`，最大 324 | `764c77d` |
+| TD-006 | `content/index.ts` 超限 | 699 | **829** | `index.ts` 148 + `widget-init/` 8 文件（最大 159）+ `background-messages.ts` + `page-listeners.ts` | `67b3e1a` |
+| TD-007 | `content/extractor.ts` 超限 | 583 | 583 | `extractor/` 8 文件，最大 142 | `0ee0dd0` |
+| TD-008 | `content/ui.ts` 超限 | 503 | 503 | `ui/` 7 文件，最大 316 | `6e7ca42` |
+| TD-009 | `PresetVoice.gender` 注释过时 | — | — | 注释修正 | `1f6ed71` |
+| TD-010 | `content/voices.ts` 超限（漏登） | — | 560 | `voices/` 4 文件，最大 353 | `35cb101` |
+
+> 「原登记行数」来自本表旧版本；**实测行数**用正确方法重新统计（见下节），
+> 多数条目被低估。此后登记行数一律以实测为准。
+
+### 行数统计方法修正（重要）
+
+原登记表与 `AGENTS.md` 的行数普遍偏小，原因是**统计方法错误**：
+PowerShell `Get-Content | Measure-Object -Line` 会少算（如 `widget.ts` 报 1750，
+实测 **2020**）。统计行数必须用 node：
+
+```js
+require('fs').readFileSync(path, 'utf8').split('\n').length;
+```
+
+或 `wc -l`（Linux）。已同步修正 `AGENTS.md` §7 与 `RULES.md` 的行数引用。
 
 ---
 
-## TD-001 — `content/widget.ts` 超限（1750 行，最严重）
+## 解决记录
 
-- **违反原则**：原则 2（单文件 ≤ 500 行）
-- **原因**：悬浮窗的 HTML 模板字符串、CSS 文本、Shadow DOM 挂载逻辑、DOM 查询助手
-  全堆在一个文件里，早期为了「创建流程在一个地方看完」而未拆分。
-- **影响范围**：`content/index.ts`（`initWidget`）、`reading-styles.ts`、所有
-  `getWidget()` / `getWidgetElementById()` 调用点。
-- **潜在风险**：模板与样式继续膨胀会进一步推高行数；拆分时须保持 Shadow DOM
-  **先挂载后填充**的顺序与 `getWidget()` 的可空语义（`AGENTS.md` §7）。
-- **移除条件**：模板常量 → `widget-template.ts`；CSS → `widget-styles.ts`
-  （与 `reading-styles.ts` 统一样式注入策略）；挂载与查询助手留在 `widget.ts`；
-  导出形状不变，回归通过。
-- **关联**：`RULES.md` `content/widget.ts` 条目；ADR-0001
+每项拆分均满足原移除条件：**每个文件 ≤ 500 行**、`npm run verify` 通过、
+对外 import 路径与导出形状不变、相关 `test/*.mjs` 冒烟通过。界面层的浏览器
+手动回归（`AGENTS.md` §3）见各提交说明，由改动人执行。
 
-## TD-002 — `shared/language-names.ts` 超限（1629 行）
+### 通用保真手段
 
-- **违反原则**：原则 2
-- **原因**：语言 / 国家 / 性别名的翻译常量表是**数据**而非逻辑，单文件堆积。
-- **影响范围**：popup / content 的音色与界面语言显示（`i18n.ts`）。
-- **潜在风险**：纯数据表合并风险低，但拆分须保持**唯一导出入口**不变，
-  避免两层 import 路径漂移；注意 bundle 体积（两入口都引全表，暂无按需加载）。
-- **移除条件**：按表拆为 `language-names/` 子目录（language / country / gender）
-  + `index.ts` 聚合导出，外部 import 路径不变。
-- **关联**：`RULES.md` `shared/language-names.ts` 条目；ADR-0001
+纯数据 / 模板类拆分（TD-001、TD-002、TD-005）用**提取脚本 + 逐字节回比**：
+脚本切出原文片段并断言不含反引号 / `${` / 反斜杠，拆分后重新拼回并与原文
+（`git show HEAD:<path>`）逐字符比较，级联顺序与数据内容零漂移。
 
-## TD-003 — `shared/detect-language.ts` 超限（871 行）
+逻辑类拆分（TD-003、TD-004、TD-006…TD-008、TD-010）用**函数级回比**：
+抽取旧文件每个函数的完整文本，去注释 / 空白 / `export` 后与新文件逐字比较
+（TD-004 的 19 个函数中 15 个逐字一致，其余 4 个仅注释位置不同）。
 
-- **违反原则**：原则 2
-- **原因**：语言特征权重常量表与加权检测算法、短文本字符脚本回退混在一起。
-- **影响范围**：自动语言检测开关路径（`AGENTS.md` §3 回归项）。
-- **潜在风险**：检测是**纯函数**，拆分须保持签名与结果完全不变；建议补离线单测
-  （`test/`，node 直跑）锁定行为再动刀。
-- **移除条件**：分数 / 特征常量单独成模块，检测算法与回退各自成模块，对外函数不变。
-- **关联**：`RULES.md` `shared/detect-language.ts` 条目；ADR-0001
+### TD-001 — `content/widget.ts`（实测 2020 行）
 
-## TD-004 — `content/player.ts` 超限（789 行）
+- **方案**：按「资源与装配分离」拆为 `widget/icons.ts`（SVG 精灵）、
+  `widget/template.ts`（HTML 结构模板，i18n 插值 + 音色面板折叠态）、
+  `widget/styles*.ts`（CSS：base / panel / controls / theme 四段 + 顺序聚合器）、
+  `widget/index.ts`（创建与 Shadow DOM 挂载）。`styles.ts` 起初拆成单文件
+  仍有 1435 行，二次提交按分区注释再拆为四段。
+- **保真**：`WIDGET_ICON_SPRITES + HTML 段` 与四段 CSS 拼接，在源码层与运行时层
+  均与旧 `innerHTML` / `style.textContent` 逐字节相同（33303 字符 CSS）。
+- **新增测试**：`test/widget.smoke.mjs`（15 例），填补 `createWidget` 此前完全没有
+  自动化覆盖的空白。
 
-- **违反原则**：原则 2（同时离原则 3 的「视图模型单一职责」较近）
-- **原因**：MiMo 路径（Web Audio）与本地容灾路径（speechSynthesis）双分支、
-  整页收集、粘贴并朗读、逐句高亮联动、映射新鲜度自检全在一个播放控制器里。
-- **影响范围**：`content/index.ts`、`reading-overlay.ts`、`sentence-map.ts`、
-  `web-audio-player.ts`、`local-tts.ts`。
-- **潜在风险**：**双分支状态机是本项目的核心风险区**——`localFallbackActive` 是会话级
-  （停止 / 清空 / 新建播放时重置），本地路径无播放句柄、暂停 / 恢复走 `speechSynthesis`
-  （`AGENTS.md` §7）。拆分必须先隔离「播放源接口」，再分离收集与联动逻辑。
-- **移除条件**：抽统一的播放源接口（MiMo / 本地两实现），播放控制 / 收集 / 高亮联动
-  / 自检各自成模块；本地容灾行为逐项与现状一致。
-- **关联**：`RULES.md` `content/player.ts` 条目；`AGENTS.md` §7 本地容灾条目；ADR-0001
+### TD-002 — `shared/language-names.ts`（1629 行）
 
-## TD-005 — `public/popup.css` 超限（699 行）
+- **方案**：按表拆为 `language-names/`（`language-names-en` / `country-names-en` /
+  `gender-translations` + 17 个按语言文件 + `index.ts` 聚合 5 个公共导出）。
+- **保真**：39 张表与旧文件逐键 0 差异。
 
-- **违反原则**：原则 2（资源文件同样约束）
-- **原因**：主界面所有分区的样式（音色面板 / 配置面板 / 开关列 / 主题）单文件堆积。
-- **影响范围**：`popup.html`；视觉基准见 `DESIGN.md`。
-- **潜在风险**：popup **无 Shadow DOM**，样式全局生效，拆分须保证层叠顺序与主题变量
-  不变；引入 CSS 拼接会改动 `esbuild.config.mjs` 的 public 复制逻辑，需同步构建验证。
-- **移除条件**：按界面分区拆成多个 `.css`（由 `popup.html` 引用或构建期拼接），
-  视觉与主题切换回归通过。
-- **关联**：`DESIGN.md`；`RULES.md` `public/` 条目；ADR-0001
+### TD-003 — `shared/detect-language.ts`（871 行）
 
-## TD-006 — `content/index.ts` 超限（699 行）
+- **方案**：先补 `test/detect-language.behavior.mjs`（36 例）锁定既有行为，
+  再拆为 `detect-language/`（`index` 检测编排 + 平局规则、`script-fallback`、
+  `scoring` + 4 个词表）。
+- **保真**：21 个词表 0 差异，36/36 行为用例保持通过。
+- **注意**：部分样本按当前算法分类「不正确」（fr→it-IT、pt→vi-VN、ro→vi-VN、
+  bg→ru-RU、nb→da-DK），属**既有行为**，测试以快照方式锁定，不得借重构「修正」。
 
-- **违反原则**：原则 2
-- **原因**：`initWidget` 的初始化序列（音色 / 设置 / 高亮 / 快捷操作）与事件绑定、
-  模块级 `selectionchange` / `mouseup` 监听全在入口文件里。
-- **影响范围**：`content/state.ts`（DOM 引用由此填充）、各 content 子模块。
-- **潜在风险**：**初始化顺序是隐性契约**——`state` 的 DOM 引用在 `initWidget` 之后才非空
-  （`AGENTS.md` §7）；拆分必须保持「挂载 → 填充 state → 绑定 → 加载」的顺序。
-- **移除条件**：初始化步骤按域拆成独立模块，入口只编排顺序；模块级全局监听单独成模块。
-- **关联**：`RULES.md` `content/index.ts` 条目；`AGENTS.md` §7 state 条目；ADR-0001
+### TD-004 — `content/player.ts`（实测 905 行）
 
-## TD-007 — `content/extractor.ts` 超限（583 行）
+- **方案**：按职责拆为 `player/`（`playback` / `chunk`（MiMo + 本地容灾）/
+  `navigation` / `entire-page` / `stop-clear` / `paste` / `scroll` / `index` 聚合）。
+- **唯一状态迁移**：模块级 `localFallbackActive` 移入 `state.localFallbackActive`
+  （与 `isCancelled` 等会话级标志同列），消除跨子模块共享可变状态；其余逻辑零改动。
+- **保真**：19 个函数全部一致（见上节）。
+- **测试修复**：`play-entire-page.smoke.mjs` 桩补齐 `createLogger` / `debounce` /
+  `limitFloat` / `persistSettings` / `readSettings` / `TOGGLE_SETTINGS` / `localTts.*`
+  与子目录深一层的路径正则，恢复 4/4。
 
-- **违反原则**：原则 2
-- **原因**：块级遍历、文本过滤、段落单元构造（与 DOM 逐字对齐的「可寻址文本」）混在一起。
-- **影响范围**：`sentence-map.ts`（依赖单元的文档序与非重叠性）、`reading-overlay.ts`。
-- **潜在风险**：`collectPageUnits` 的**输出形状是硬契约**（文档序、非重叠、与 DOM 逐字对齐），
-  被 `sentence-map` 反查与逐句高亮依赖；采集必须保持**只读**（不修改页面 DOM）。
-  建议先跑 `test/extractor.smoke.mjs` 锁定行为。
-- **移除条件**：遍历 / 过滤 / 单元构造各自成模块，`collectPageUnits` 签名与输出不变。
-- **关联**：`RULES.md` `content/extractor.ts` 条目；`test/extractor.smoke.mjs`；ADR-0001
+### TD-005 — `public/popup.css`（实测 820 行）
 
-## TD-008 — `content/ui.ts` 超限（503 行，刚越线）
+- **方案**：按界面分区拆为 7 个 `popup-*.css`，由 `popup.html` 顺序 `<link>` 引用
+  （不改构建，`public/` 原样复制）。
+- **保真**：拼接后规则与旧文件逐字节一致（15480 字符）。
 
-- **违反原则**：原则 2
-- **原因**：按钮状态 / 禁用提示 / 拖拽 / 高亮 / 主题五类界面行为合并。
-- **影响范围**：`content/widget.ts`、`state.ts`。
-- **潜在风险**：拖拽与最小化状态有持久化诉求，拆分时注意状态读写入口单一。
-- **移除条件**：拖拽与主题各自成模块，按钮状态与提示留 `ui.ts`。
-- **关联**：`RULES.md` `content/ui.ts` 条目；ADR-0001
+### TD-006 — `content/index.ts`（实测 829 行）
 
-## TD-009 — `PresetVoice.gender` 注释过时（`shared/types.ts:14`）
+- **方案**：初始化步骤按域拆为 `widget-init/`（dom-refs / auth-screen / audio-player /
+  theme / global-bridge / voice-search / language-select / controls），
+  background 消息监听 → `background-messages.ts`，网页点击跳转与划词监听 →
+  `page-listeners.ts`；`index.ts` 只保留模块级注册与初始化编排顺序（148 行）。
 
-- **违反原则**：原则 8（为维护者保留准确上下文）
-- **原因**：注释写「历史兼容字段（MiMo 预置音色不使用）」，但该字段实际被
-  `content/voices.ts`（搜索过滤 / 详情展示）与 `popup/voices.ts`（搜索 / 展示）读取，
-  用于**中转（relay）音色**（`/v1/voices` 返回 `Gender`，MiMo 预置音色不填）。
-- **影响范围**：relay 链路的音色性别显示与搜索。
-- **潜在风险**：维护者可能据注释**误删**该可选字段，导致中转音色的性别标注消失
-  （MiMo 链路不受影响，回归时若只测 MiMo 不会暴露）。
-- **移除条件**：改为准确注释——说明「MiMo 预置音色不填；relay 音色由后端 `Gender` 填充，
-  供两层 voices 模块展示与搜索」。纯注释改动，`npm run verify` 即可。
-- **关联**：`AGENTS.md` §1.2 storage / 错误响应契约；ADR-0001
+### TD-007 — `content/extractor.ts`（583 行）
+
+- **方案**：拆为 `extractor/`（selectors / site-rules / skip-patterns /
+  pattern-match / block-detection / addressable-text / traversal / index 编排 + 再导出）。
+- **保真**：`extractor.smoke.mjs` 20/20。
+
+### TD-008 — `content/ui.ts`（503 行）
+
+- **方案**：拆为 `ui/`（screens / drag / time-progress / text-highlight /
+  controls / tooltips / index 再导出 23 个公共符号）。
+
+### TD-009 — `PresetVoice.gender` 注释过时
+
+- **修正**：`shared/types.ts` 注释改为说明该字段由 relay 音色的后端 `Gender` 填充，
+  供两层 voices 模块展示与搜索；MiMo 预置音色不填。
+
+### TD-010 — `content/voices.ts`（漏登，实测 560 行）
+
+- **发现**：原登记表因行数统计方法缺陷漏登（旧方法报 <500）。
+- **方案**：拆为 `voices/`（`format` 显示格式化纯函数 / `loader` 缓存 + 拉取 + 重试 /
+  `dropdown` 过滤 / 渲染 / 选择 / `index` 聚合），依赖方向无环：
+  `format ← dropdown ← loader`。
+- **保真**：11 个函数（含 3 个私有）全部一致。
+
+---
+
+## 拆分后仍须遵守的隐性契约（改动这些模块前必读）
+
+拆分只移动了代码位置，以下**不变量**依然是硬约束：
+
+- **`content/index.ts` 初始化顺序**：挂载 → 填充 `state` 的 DOM 引用 → 绑定 → 加载。
+  `state` 的 DOM 引用在 `initWidget` 之后才非空（`AGENTS.md` §7）。
+- **`content/widget/` 挂载顺序**：先建 host + Shadow DOM → 塞 `<style>` → 塞 widget →
+  最后调 `_widgetInitializer`。`getWidget()` 可能为 null（悬浮窗未创建），调用方必须判空。
+  **`styles.ts` 的四段拼接顺序即 CSS 级联顺序**，调整段落顺序会改变主题与覆盖关系。
+- **`state.localFallbackActive` 是会话级**：停止 / 清空 / 新建播放时重置；
+  本地容灾路径无播放句柄，暂停 / 恢复走 `speechSynthesis`（`AGENTS.md` §7）。
+- **`extractor` 的 `collectPageUnits` 输出是硬契约**：文档序、非重叠、与 DOM 逐字对齐，
+  被 `sentence-map` 反查与逐句高亮依赖；采集必须**只读**（不改页面 DOM）。
+- **`sentence-map` / `reading-overlay` 的括号处理**：句子 span 覆盖「合并区间」，
+  被剔除的括号内容仍在 span 内（随句高亮但不朗读）——不要用 `map.sentences` 长度
+  断言 span 长度（见 `test/inline-reading.smoke.mjs` 的幂等用例）。
+- **`detect-language` 的既有输出不得借重构修正**（见 TD-003）。
+
+## 关联
+
+- `AGENTS.md` §0 原则 2、§7 已知坑、§3 浏览器手动回归清单
+- `RULES.md` 各模块条目（代码地图）
+- `docs/adr/0001-core-engineering-principles.md`

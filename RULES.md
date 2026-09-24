@@ -60,9 +60,9 @@ src/background   src/popup     src/content
 - `content` 与 `popup` 之间**不得互相 import**；需要同一份逻辑就下沉到 `shared/`。
 - 扩展端与 `tts-relay` 之间**只有 HTTP 短连接**（`POST /v1/tts` / `GET /v1/voices` /
   `GET /v1/health`）；WebSocket 私有协议与令牌漂移全部收在后端，扩展端不得引入 WS 客户端。
-- **单文件 ≤ 500 行**（原则 2）：现有 8 个超限文件（`content/widget.ts` 1750 行最严重）
-  见 `docs/tech-debt.md`；本层新增模块先规划单一职责，接近 400 行主动拆分，
-  不要在超限文件上继续堆叠功能。
+- **单文件 ≤ 500 行**（原则 2）：历史超限文件已全部拆分完成（见 `docs/tech-debt.md`，
+  当前全仓库 130 个 `ts` / `css` 源文件均 ≤ 500 行）；本层新增模块先规划单一职责，
+  接近 400 行主动拆分，不要在接近上限的文件上继续堆叠功能。
 
 ---
 
@@ -84,8 +84,11 @@ src/background   src/popup     src/content
   段落结构保留、长句拆分）、段落分隔、object URL 清理。**纯算法**，不依赖 DOM。
 - `audio-cache.ts` — `AudioCacheManager`：生产者-消费者预取缓存（`start` / `ensure`
   / `setCurrentIndex` / `stop` / `clear`）；**缓存键含 provider**，两链路互不污染。
-- `detect-language.ts` — 加权分数语言检测（`detectLanguage`，含短文本字符脚本回退）。
-- `language-names.ts` — 语言 / 国家 / 性别名翻译常量表（供 i18n 显示用）。
+- `detect-language/` — 加权分数语言检测（`index.ts` 的 `detectLanguage` 编排与平局规则 +
+  `script-fallback.ts` 短文本字符脚本回退 + `scoring.ts` 与 4 个词表）；**纯函数**，
+  既有输出已由 `test/detect-language.behavior.mjs` 快照锁定，不得借重构「修正」。
+- `language-names/` — 语言 / 国家 / 性别名翻译常量表（`index.ts` 聚合 5 个公共导出 +
+  按语言的常量文件；供 i18n 显示用）。
 - `settings.ts` — 设置存储层：`persistSettings` / `readSettings`、provider 读写
   （单一事实源）、开关键派生（chrome.storage 不可用时回退 localStorage）。
 - `toggle-settings.ts` — 布尔开关统一声明表（`TOGGLE_SETTINGS`）：两层 UI 自动渲染、
@@ -163,22 +166,34 @@ src/background   src/popup     src/content
 
 ### 4. `src/content/`（网页悬浮窗 + 页面内交互）
 
-- `index.ts` — `initWidget`：初始化序列与事件绑定，通过 `setWidgetInitializer` 被 widget
-  创建流程调用；模块级 `selectionchange` / `mouseup` 监听。
+- `index.ts` — `initWidget`：只做初始化编排（顺序为隐性契约：挂载 → 填充 state →
+  绑定 → 加载）与模块级注册；初始化步骤拆到 `widget-init/`（dom-refs / auth-screen /
+  audio-player / theme / global-bridge / voice-search / language-select / controls），
+  background 消息监听在 `background-messages.ts`，网页点击跳转与划词监听在
+  `page-listeners.ts`。
 - `state.ts` — content 可变状态 + Shadow DOM 内的 DOM 引用（`ContentState` 接口，
-  运行时由 `initWidget` 填充）。
-- `widget.ts` — 悬浮窗创建：HTML 模板 + CSS + Shadow DOM 挂载；`getWidget()` /
-  `getWidgetElementById()`；`setWidgetInitializer` 钩子注册点。
-- `ui.ts` — 按钮状态 / 禁用提示 / 拖拽 / 高亮 / 主题。
-- `player.ts` — 播放控制：MiMo 路径（Web Audio）与本地容灾路径（speechSynthesis）双分支、
-  粘贴并朗读、整页收集、逐句高亮主开关联动、播放前映射新鲜度自检。
-- `voices.ts` — 音色加载 / 过滤 / 搜索 / 下拉 / 选择（悬浮窗内，目录随 provider 切换）。
+  运行时由 `initWidget` 填充）；`localFallbackActive` 会话级容灾标志也在此。
+- `widget/` — 悬浮窗创建：`index.ts`（createWidget 幂等创建 + Shadow DOM 挂载 +
+  `getWidget()` / `getWidgetElementById()` + `setWidgetInitializer` 钩子注册点）/
+  `icons.ts`（SVG 图标精灵）/ `template.ts`（HTML 结构模板，i18n 插值）/
+  `styles*.ts`（CSS：base / panel / controls / theme 四段 + `styles.ts` 顺序聚合器，
+  **拼接顺序即级联顺序，不得随意调换段落顺序**）。
+- `ui/` — 按钮状态 / 禁用提示 / 拖拽 / 高亮 / 主题（screens / drag / time-progress /
+  text-highlight / controls / tooltips，`index.ts` 再导出 23 个公共符号）。
+- `player/` — 播放控制：`playback`（开始播放三态判定）/ `chunk`（MiMo 路径 Web Audio
+  与本地容灾 speechSynthesis 双分支的单句循环）/ `navigation`（上一句 / 下一句 /
+  跳转，防抖 + 请求作废）/ `entire-page`（整页收集与句子映射生命周期）/
+  `stop-clear` / `paste`（粘贴并朗读 + Google Docs 引导）/ `scroll`。
+- `voices/` — 音色加载 / 过滤 / 搜索 / 下拉 / 选择（`loader` 缓存与拉取 + `dropdown`
+  过滤 / 渲染 / 选择 + `format` 显示格式化纯函数；悬浮窗内，目录随 provider 切换）。
 - `selection.ts` — 划词后的绿色朗读按钮（Shadow DOM 注入样式，跟随左键抬起位置）。
 - `text-input.ts` — 选中朗读 / 粘贴预处理（去 HTML 标签 / 方括号）。
 - `page-fab.ts` — 页面内「朗读整页」悬浮按钮：可拖动 + 3 秒无点击自动吸附边缘，
   Shadow DOM 隔离，有可采集正文时才出现。
-- `extractor.ts` — 网页正文采集（块级遍历 + 文本过滤，**只读不修改页面**）；
-  `collectPageUnits` 输出文档序、非重叠的段落单元（元素 + 与 DOM 逐字对齐的「可寻址文本」）。
+- `extractor/` — 网页正文采集（selectors / site-rules / skip-patterns / pattern-match /
+  block-detection / addressable-text / traversal + `index.ts` 编排与再导出）；块级遍历
+  + 文本过滤，**只读不修改页面**；`collectPageUnits` 输出文档序、非重叠的段落单元
+  （元素 + 与 DOM 逐字对齐的「可寻址文本」）。
 - `sentence-map.ts` — 句子 → 段落单元 → **精确字符区间**映射（区间式分割，剔括号后可多段）；
   供逐句高亮与「点击跳转」反查。
 - `reading-overlay.ts` — 网页内逐句高亮的 DOM 覆盖层：把句子区间对应的文本节点包进透明
@@ -197,7 +212,8 @@ src/background   src/popup     src/content
 **修改要点**：
 
 - **悬浮窗可能尚未创建**：`getWidget()` 返回 `HTMLElement | null`，所有调用必须判空或可选链；
-- `widget.ts` **不得 import `index.ts`**（循环依赖）：初始化一律走 `setWidgetInitializer` 钩子；
+- `widget/` 的 `index.ts` **不得 import `index.ts`**（循环依赖）：初始化一律走
+  `setWidgetInitializer` 钩子；
 - Shadow DOM 内的 DOM 引用全部用 `getWidgetElementById` / `getWidget().querySelector`，
   **不要**用 `document.getElementById`（会拿到页面的，不是悬浮窗的）；
 - 页面 CSP 可能拦截 blob 媒体 → MiMo 路径音频走 `WebAudioPlayer`，不要回退 `<audio src=blob:>`；
@@ -211,7 +227,9 @@ src/background   src/popup     src/content
 
 - `manifest.json` — MV3 清单（**版本号与 `package.json` 同步**；入口文件名是契约；
   `optional_host_permissions` 用于后端中转按 origin 运行时申请）。
-- `popup.html` / `popup.css` — 主界面结构与样式。
+- `popup.html` + 7 个 `popup-*.css`（base / header / panels / buttons / config-panel /
+  voice-panel / status）— 主界面结构与样式，由 `popup.html` 顺序 `<link>` 引用；
+  **`<link>` 顺序即层叠顺序**，调整分区顺序会改变覆盖关系。
 - `_locales/<lang>/messages.json` — **2 个语言文件（en / zh_CN），不要动**（i18n 键保持既有集合）。
 - `icons/` — 扩展图标。
 
