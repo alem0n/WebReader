@@ -7,7 +7,7 @@
  */
 import { RELAY_TTS_TIMEOUT_MS } from '../shared/constants';
 import { detectAudioFormat } from '../shared/audio-format';
-import type { PresetVoice, PresetVoicesResponse, TtsResponse } from '../shared/types';
+import type { PresetVoice, TtsResponse } from '../shared/types';
 import { getRelayToken, getRelayUrl } from './relay-config';
 import { logger } from './log';
 
@@ -18,40 +18,7 @@ export interface RelaySpeechRequest {
   speed?: number;
 }
 
-/** 后端音色列表响应体（与 tts-relay /v1/voices 对齐） */
-interface RelayVoicesBody {
-  ok: boolean;
-  count?: number;
-  voices?: PresetVoice[];
-  message?: string;
-}
-
-/** 透传后端音色目录（链路 2：provider 感知的音色加载） */
-export async function handleRelayVoices(): Promise<PresetVoicesResponse> {
-  const relayUrl = await getRelayUrl();
-  if (!relayUrl) {
-    return { success: false, error: '尚未配置后端中转地址' };
-  }
-  const relayToken = await getRelayToken();
-
-  try {
-    const response = await fetch(`${relayUrl}/v1/voices`, {
-      method: 'GET',
-      headers: relayToken ? { Authorization: `Bearer ${relayToken}` } : {},
-    });
-    if (!response.ok) {
-      return { success: false, error: `后端返回 HTTP ${response.status}` };
-    }
-    const data = (await response.json()) as RelayVoicesBody;
-    if (!data || !Array.isArray(data.voices)) {
-      return { success: false, error: '后端音色列表格式无效' };
-    }
-    logger.debug(`relay voices loaded: ${data.voices.length}`);
-    return { success: true, voices: data.voices };
-  } catch (e) {
-    return { success: false, error: `无法连接后端：${(e as Error).message}` };
-  }
-}
+/** 后端音色列表响应体：已随音色加载迁移至 background/voices/relay-voices.ts */
 
 interface RelayErrorBody {
   ok: false;

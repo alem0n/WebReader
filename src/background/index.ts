@@ -3,7 +3,6 @@
  * 移除了原版的 Google OAuth 登录、认证检查、登出、统计上报、卸载/重装追踪、SSE 流式传输。
  * 仅代理 MiMo TTS 合成请求、API Key 管理、预置音色与语言文件加载。
  */
-import { MIMO_PRESET_VOICES } from '../shared/constants';
 import type {
   BackgroundResponse,
   I18nMessagesResponse,
@@ -14,12 +13,13 @@ import type {
 } from '../shared/types';
 import { checkApiKeyStatus, saveApiKey } from './api-key';
 import { handleTTSSpeech, type TtsSpeechRequest } from './tts';
-import { handleRelayTTS, handleRelayVoices, type RelaySpeechRequest } from './relay-tts';
+import { handleRelayTTS, type RelaySpeechRequest } from './relay-tts';
 import { checkRelayStatus, saveRelayConfig } from './relay-config';
 import { resolveProvider, setProvider } from './provider';
 import { loadI18nMessagesForLocale } from './i18n';
 import { sendToTab } from './msg';
 import { ensureContextMenu, setupContextMenuHandler } from './context-menu';
+import { getVoiceProviderOrFallback } from './voices';
 
 /** 切换当前活动标签页中的悬浮窗（由 popup 主界面按钮触发） */
 function toggleWidgetOnActiveTab(sendResponse: (response: ToggleWidgetResponse) => void): void {
@@ -87,14 +87,16 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
       return true; // async
 
     case 'getPresetVoices': {
-      // 音色目录同样按 provider 路由：relay 时透传后端 /v1/voices
+      // 音色目录同样按 provider 路由：由各引擎的 VoiceProvider 提供选项
+      // （MiMo 本地常量 / relay 后端拉取），消息处理器只做派发
       void resolveProvider().then(async (provider) => {
-        if (provider !== 'relay') {
-          sendResponse({ success: true, voices: MIMO_PRESET_VOICES } as PresetVoicesResponse);
-          return;
+        const voiceProvider = getVoiceProviderOrFallback(provider);
+        const result = await voiceProvider.getVoices();
+        if ('voices' in result) {
+          sendResponse({ success: true, voices: result.voices } as PresetVoicesResponse);
+        } else {
+          sendResponse({ success: false, error: result.error } as PresetVoicesResponse);
         }
-        const response = await handleRelayVoices();
-        sendResponse(response as PresetVoicesResponse);
       });
       return true; // async
     }
