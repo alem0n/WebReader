@@ -10,6 +10,7 @@ import { TOGGLE_SETTINGS, type ToggleKey } from '../shared/toggle-settings';
 import { state } from './state';
 import { saveSettings } from './settings';
 import { refreshInlineReading } from './player';
+import { resolveVoiceForText } from './voices/voice-selection';
 import { updatePlayButtonState, setupDisabledTooltips, highlightFirstSentenceIfNeeded } from './ui';
 import { createContentLogger } from './log';
 
@@ -19,8 +20,10 @@ const logger = createContentLogger('toggle-settings');
 const TOGGLE_CHANGE_HANDLERS: Partial<Record<ToggleKey, (checked: boolean) => void>> = {
   autoDetectLanguage: (checked) => {
     if (checked) {
-      // 自动检测接管音色选择：清空已选音色，但保留搜索框显示
-      state.selectedVoice = null;
+      // 自动检测接管音色选择：按当前正文重新选音色并落实为单一来源 selectedVoice
+      // （不再置 null）；正文为空时保留当前已选音色，等开始朗读时再按正文落实
+      const text = (state.textContent?.textContent || state.textContent?.innerText || '').trim();
+      if (text) resolveVoiceForText(text);
     }
     updatePlayButtonState();
     setupDisabledTooltips();

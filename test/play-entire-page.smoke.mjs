@@ -115,6 +115,11 @@ await esbuild.build({
             export function escapeHtml(s) { return s; }
             export function highlightFirstSentenceIfNeeded() {}
             export function i18n(k) { return k; }
+            export function getFlagIdForLocale() { return ''; }
+            export function getTranslatedCountry() { return ''; }
+            export function getTranslatedGender() { return ''; }
+            export function getTranslatedLanguageName() { return ''; }
+            export const languageNames = {};
             export function removeHTMLTags(s) { return s; }
             export function removeSquareBrackets(s) { return s; }
             export function handleStop() { window.__calls.stop++; }

@@ -8,12 +8,12 @@
  */
 import { state } from '../state';
 import { sleep } from '../utils';
-import { detectLanguage } from '../../shared/detect-language';
 import { hideError, showError, updateButtonStates, updateClearButton, updatePlayButtonState } from '../ui';
 import { loadSettings, saveSettings, syncSpeedSelectFromStored } from '../settings';
 import { createContentLogger } from '../log';
 import { formatVoiceName } from './format';
 import { filterVoices, selectVoice } from './dropdown';
+import { resolveVoiceForText } from './voice-selection';
 
 const logger = createContentLogger('voices');
 
@@ -126,53 +126,40 @@ export async function loadVoices(options = {}) {
 
       // Restore saved voice and continue with existing logic
       const settings = await loadSettings();
-      if (state.autoDetectLanguage) {
-        (state as any).selectedVoice = null;
-        logger.debug('Auto-detect is ON, selectedVoice cleared');
-      } else if ((settings as any).selectedVoice) {
-        const savedVoice = state.allVoices.find((v) => v.name === (settings as any).selectedVoice);
-        if (savedVoice) {
-          selectVoice(savedVoice, false);
-          state.voiceSearchInput!.value = formatVoiceName(savedVoice);
-          if (typeof updateClearButton === 'function') updateClearButton();
-          logger.debug('Restored saved voice:', savedVoice.name);
+      if (!state.autoDetectLanguage) {
+        // 手选模式：恢复用户保存的音色；保存的音色不在列表里（如切换 provider 后）
+        // 或从未选过，则回到自动检测模式
+        if ((settings as any).selectedVoice) {
+          const savedVoice = state.allVoices.find((v) => v.name === (settings as any).selectedVoice);
+          if (savedVoice) {
+            selectVoice(savedVoice, false);
+            state.voiceSearchInput!.value = formatVoiceName(savedVoice);
+            if (typeof updateClearButton === 'function') updateClearButton();
+            logger.debug('Restored saved voice:', savedVoice.name);
+          } else {
+            state.autoDetectLanguage = true;
+            if (state.toggleCheckboxes.autoDetectLanguage) state.toggleCheckboxes.autoDetectLanguage.checked = true;
+            saveSettings();
+            logger.debug('Saved voice not found, enabled auto-detect');
+          }
         } else {
           state.autoDetectLanguage = true;
           if (state.toggleCheckboxes.autoDetectLanguage) state.toggleCheckboxes.autoDetectLanguage.checked = true;
           saveSettings();
-          logger.debug('Saved voice not found, enabled auto-detect');
+          logger.debug('No voice selected, enabled auto-detect');
         }
-      } else {
-        state.autoDetectLanguage = true;
-        if (state.toggleCheckboxes.autoDetectLanguage) state.toggleCheckboxes.autoDetectLanguage.checked = true;
-        saveSettings();
-        logger.debug('No voice selected, enabled auto-detect');
       }
 
       if (state.speedSelect) {
         (state as any).playbackSpeed = syncSpeedSelectFromStored(state.speedSelect, (settings as any).playbackSpeed);
       }
 
+      // 自动检测模式且有正文：按正文选音色并落实为单一来源 selectedVoice（不再只回显搜索框）
       const existingText = (state.textContent!.textContent || state.textContent!.innerText || '').trim();
       if (state.autoDetectLanguage && existingText.length > 20) {
         logger.debug('Voices loaded, checking existing text...');
-        const detectedLang = detectLanguage(existingText);
-        if (detectedLang) {
-          const langPrefix = detectedLang.split('-')[0];
-          const voicesForLang = state.allVoices.filter(
-            (v) =>
-              v.language &&
-              (v.language === detectedLang ||
-                v.language.startsWith(detectedLang + '-') ||
-                (v.language.startsWith(langPrefix + '-') && !v.language.startsWith('fil-')))
-          );
-          if (voicesForLang.length > 0) {
-            const voiceToShow = voicesForLang[0];
-            state.voiceSearchInput!.value = formatVoiceName(voiceToShow);
-            if (typeof updateClearButton === 'function') updateClearButton();
-            logger.debug(`Auto-detected after loading: ${detectedLang} → ${voiceToShow.name}`);
-          }
-        }
+        const resolved = resolveVoiceForText(existingText);
+        if (resolved && typeof updateClearButton === 'function') updateClearButton();
       }
 
       updatePlayButtonState();
@@ -271,62 +258,44 @@ async function loadVoicesFromServer(silent = false, options = {}) {
 
       filterVoices('');
 
-      // Try to restore saved voice
+      // 恢复用户手选音色（仅手选模式）；autoDetect 开启时保留现有 selectedVoice，
+      // 由下方按正文的检测落实为单一来源
       const settings = await loadSettings();
 
-      if (state.autoDetectLanguage) {
-        // When auto-detect is enabled, clear any saved voice
-        (state as any).selectedVoice = null;
-        logger.debug('Auto-detect is ON, selectedVoice cleared');
-      } else if ((settings as any).selectedVoice) {
-        // Restore saved voice only if auto-detect is OFF
-        const savedVoice = state.allVoices.find((v) => v.name === (settings as any).selectedVoice);
-        if (savedVoice) {
-          selectVoice(savedVoice, false);
-          state.voiceSearchInput!.value = formatVoiceName(savedVoice);
-          if (typeof updateClearButton === 'function') updateClearButton();
-          logger.debug('Restored saved voice:', savedVoice.name);
+      if (!state.autoDetectLanguage) {
+        // 手选模式：恢复用户保存的音色；保存的音色不在列表里（如切换 provider 后）
+        // 或从未选过，则回到自动检测模式
+        if ((settings as any).selectedVoice) {
+          const savedVoice = state.allVoices.find((v) => v.name === (settings as any).selectedVoice);
+          if (savedVoice) {
+            selectVoice(savedVoice, false);
+            state.voiceSearchInput!.value = formatVoiceName(savedVoice);
+            if (typeof updateClearButton === 'function') updateClearButton();
+            logger.debug('Restored saved voice:', savedVoice.name);
+          } else {
+            state.autoDetectLanguage = true;
+            if (state.toggleCheckboxes.autoDetectLanguage) state.toggleCheckboxes.autoDetectLanguage.checked = true;
+            saveSettings();
+            logger.debug('Saved voice not found, enabled auto-detect');
+          }
         } else {
-          // Saved voice not found, enable auto-detect
           state.autoDetectLanguage = true;
           if (state.toggleCheckboxes.autoDetectLanguage) state.toggleCheckboxes.autoDetectLanguage.checked = true;
           saveSettings();
-          logger.debug('Saved voice not found, enabled auto-detect');
+          logger.debug('No voice selected, enabled auto-detect');
         }
-      } else {
-        // No voice selected and auto-detect is off, enable auto-detect
-        state.autoDetectLanguage = true;
-        if (state.toggleCheckboxes.autoDetectLanguage) state.toggleCheckboxes.autoDetectLanguage.checked = true;
-        saveSettings();
-        logger.debug('No voice selected, enabled auto-detect');
       }
 
       if (state.speedSelect) {
         (state as any).playbackSpeed = syncSpeedSelectFromStored(state.speedSelect, (settings as any).playbackSpeed);
       }
 
-      // If there's already text and auto-detect is on, detect language now
+      // 自动检测模式且有正文：按正文选音色并落实为单一来源 selectedVoice（不再只回显搜索框）
       const existingText = (state.textContent!.textContent || state.textContent!.innerText || '').trim();
       if (state.autoDetectLanguage && existingText.length > 20) {
         logger.debug('Voices loaded, checking existing text...');
-        const detectedLang = detectLanguage(existingText);
-        if (detectedLang) {
-          // More precise language matching: try exact match first, then prefix with hyphen
-          const langPrefix = detectedLang.split('-')[0];
-          const voicesForLang = state.allVoices.filter(
-            (v) =>
-              v.language &&
-              (v.language === detectedLang ||
-                v.language.startsWith(detectedLang + '-') ||
-                (v.language.startsWith(langPrefix + '-') && !v.language.startsWith('fil-')))
-          );
-          if (voicesForLang.length > 0) {
-            const voiceToShow = voicesForLang[0];
-            state.voiceSearchInput!.value = formatVoiceName(voiceToShow);
-            if (typeof updateClearButton === 'function') updateClearButton();
-            logger.debug(`Auto-detected after loading: ${detectedLang} → ${voiceToShow.name}`);
-          }
-        }
+        const resolved = resolveVoiceForText(existingText);
+        if (resolved && typeof updateClearButton === 'function') updateClearButton();
       }
 
       // Update button state
