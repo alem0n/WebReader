@@ -12,7 +12,7 @@
 1. **误判体感差**：中英混排、短文本、拉丁语种常被误判（小语种词频得分高时平局
    规则也未必兜得住），命中无可用音色的语种时静默回退 `mimo_default`，用户不知情；
 2. **状态机脆弱**：「自动检测 / 手选」是互斥关系，两层各有恢复分支与回退兜底，
-   `docs/tech-debt.md` TD-011 记录了 popup 层同源缺陷（清除后未重开自动检测则
+   popup 层存在同源缺陷（清除后未重开自动检测则
    播放报「请选择音色」）；
 3. **死重逻辑**：MiMo 预置音色只有中英两语种，而界面语言本身就只有中 / 英两档，
    检测出的绝大多数语种最终都回退到默认音色——检测的实际收益极低。
@@ -58,8 +58,7 @@
 ## 反向链接
 
 - `AGENTS.md` §1.1 决策日志（本决策已登记）
-- `docs/tech-debt.md` TD-003（detect-language 拆分）、TD-011（popup 音色状态机）
-  —— 均随本决策关闭
+- `docs/tech-debt.md`（相关历史债务随本决策关闭）
 - `RULES.md` `shared/` 与 `content/voices`、`content/player` 代码地图条目
 - `src/shared/voice-default.ts`、`src/content/voices/voice-selection.ts`、
   `src/popup/voices.ts`

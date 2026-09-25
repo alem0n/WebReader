@@ -1,7 +1,7 @@
 /**
  * 悬浮窗样式 · 用户菜单、精简模式、暗色变体（Night Ink）、Tooltip、动画。
  *
- * 从 widget/styles.ts 按分区拆出（docs/tech-debt.md TD-001）：
+ * 从 widget/styles.ts 按分区拆出：
  * 各段由 styles.ts 按原顺序聚合成单一字符串注入 Shadow DOM，级联顺序与拆分前完全一致。
  */
 export const WIDGET_STYLES_THEME = `/* ==================== 用户菜单（覆盖层） ==================== */

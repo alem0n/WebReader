@@ -307,7 +307,7 @@ src/background   src/popup     src/content
 
 **原则硬约束（摘要，详见 `AGENTS.md` §0 / §6）**：
 
-- 单文件 ≤ 500 行（原则 2），超限文件清单与拆分方向见 `docs/tech-debt.md`；
+- 单文件 ≤ 500 行（原则 2），历史超限文件已全部拆分完成（见 `docs/tech-debt.md`）；
 - 四类模型不互相泄漏，`shared/**` 不持层 state、不 import 层模块（原则 3）；
 - 新增依赖前先核查已有依赖 + 官方文档 + 类型定义（原则 7）；
 - 日志保留诊断上下文，禁止输出 API Key / 中转 Token（原则 9）；

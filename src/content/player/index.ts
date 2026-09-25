@@ -1,7 +1,7 @@
 /**
  * player —— 朗读播放器。
  *
- * 原单文件 player.ts 905 行（docs/tech-debt.md TD-004），按职责拆为本目录：
+ * 原单文件 player.ts 905 行，按职责拆为本目录：
  *  - playback：开始播放（暂停 / 恢复 / 新播放三态判定与启动序列）
  *  - chunk：单句播放循环（MiMo Web Audio 管线 + 本地音色容灾）
  *  - navigation：上一句 / 下一句 / 跳到任意句（防抖 + 请求作废）
