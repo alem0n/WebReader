@@ -2,6 +2,7 @@
 import { state, voiceSearchInput, voiceDropdown, voiceLoadingIndicator, speedSelect } from './state';
 import type { PresetVoice } from '../shared/types';
 import { pickDefaultVoice } from '../shared/voice-default';
+import { resolveRestoredVoice } from '../shared/voice-restore';
 import { loadSettings, saveSettings, syncSpeedSelectFromStored } from './settings';
 import { hideError, showError } from './ui';
 import { i18n } from './i18n';
@@ -61,9 +62,11 @@ export async function loadVoices(options: { attempt?: number; authStage?: string
     // Initialize dropdown with all voices (no search term)
     filterVoices('');
 
-    // 恢复用户手选音色，或按界面语言派生默认音色（落实为单一来源 selectedVoice）
+    // 恢复用户手选音色，或按界面语言派生默认音色（落实为单一来源 selectedVoice）。
+    // 判据见 shared/voice-restore：旧版自动检测落盘的 selectedVoice 没有手选标志，
+    // 一律按界面语言重新派生，避免中文界面恢复英文音色（自愈迁移）。
     const settings = await loadSettings();
-    const savedVoice = settings.selectedVoice ? state.allVoices.find((v) => v.name === settings.selectedVoice) : null;
+    const savedVoice = resolveRestoredVoice(settings, state.allVoices);
     if (savedVoice) {
       selectVoice(savedVoice);
       voiceSearchInput.value = savedVoice.name;

@@ -8,7 +8,15 @@ import { DEFAULT_TTS_PROVIDER, TTS_PROVIDER_STORAGE } from './constants';
 import { limitFloat } from './utils';
 import { TOGGLE_KEYS } from './toggle-settings';
 
-const SETTING_KEYS = ['selectedVoice', 'playbackSpeed', 'voicePanelControlsCollapsed', 'ttsProvider', 'relayUrl', ...TOGGLE_KEYS] as const;
+const SETTING_KEYS = [
+  'selectedVoice',
+  'voiceSelectionIsManual',
+  'playbackSpeed',
+  'voicePanelControlsCollapsed',
+  'ttsProvider',
+  'relayUrl',
+  ...TOGGLE_KEYS,
+] as const;
 
 /** 持久化设置 */
 export function persistSettings(settings: ExtensionSettings): void {

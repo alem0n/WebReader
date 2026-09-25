@@ -88,6 +88,10 @@ src/background   src/popup     src/content
 - `voice-default.ts` — 默认音色派生（**纯函数**）：`pickDefaultVoice(voices, locale)`
   把界面语言映射到音色主语言前缀（zh_CN→zh、en→en，未知回退 en），取目录首个匹配
   音色，无匹配回退 `mimo_default`；`getVoiceLangForInterfaceLanguage`。决策见 ADR 0002。
+- `voice-restore.ts` — 音色恢复判据（**纯函数**）：`resolveRestoredVoice(settings, voices)`
+  判断持久化的 `selectedVoice` 是否应作为**用户手选**沿用。以持久化标志
+  `voiceSelectionIsManual` 为唯一判据（缺标志 / false → 返回 null，调用方按界面语言
+  重新派生），避免旧版自动检测落盘的残留音色顶替界面语言默认（TD-012）。
 - `language-names/` — 语言 / 国家 / 性别名翻译常量表（`index.ts` 聚合 5 个公共导出 +
   按语言的常量文件；供 i18n 显示用）。
 - `settings.ts` — 设置存储层：`persistSettings` / `readSettings`、provider 读写
@@ -198,7 +202,10 @@ src/background   src/popup     src/content
     「音色加载完成 / 界面语言切换 / 开始播放」三处。`navigation.jumpToSentence`
     与下拉选中态 / 语言过滤一律只读 `selectedVoice`，不得重新派生——跳转重新
     选音色曾导致整页朗读点击跳转失效。清除按钮 = 回到跟随界面语言（撤销手选
-    标记后重新派生，避免「selectedVoice 为空」的不自洽态）。决策见 ADR 0002。
+    标记后重新派生，避免「selectedVoice 为空」的不自洽态）。**恢复判据**：
+    加载完成后由 `shared/voice-restore.resolveRestoredVoice` 判断存储中的
+    `selectedVoice` 是否为真手选（持久化标志 `voiceSelectionIsManual` 缺失或为 false
+    时一律重新派生——旧版自动检测落盘的残留音色没有该标志，TD-012）。决策见 ADR 0002。
 - `selection.ts` — 划词后的绿色朗读按钮（Shadow DOM 注入样式，跟随左键抬起位置）。
 - `text-input.ts` — 选中朗读 / 粘贴预处理（去 HTML 标签 / 方括号）。
 - `page-fab.ts` — 页面内「朗读整页」悬浮按钮：可拖动 + 3 秒无点击自动吸附边缘，
