@@ -3,17 +3,18 @@
  *
  * 从 voices.ts 拆出（docs/tech-debt.md TD-010）。音色来自 background 的本地
  * 预置表（无网络请求），结果缓存 24 小时；命中缓存时后台静默刷新，未命中时
- * 同步加载并重试。加载完成后恢复用户已选音色 / 语速，并对已有正文做一次
- * 语言检测以回显合适音色。
+ * 同步加载并重试。加载完成后恢复用户已选音色 / 语速，未手选时按界面语言
+ * 派生默认音色。
  */
 import { state } from '../state';
 import { sleep } from '../utils';
 import { hideError, showError, updateButtonStates, updateClearButton, updatePlayButtonState } from '../ui';
-import { loadSettings, saveSettings, syncSpeedSelectFromStored } from '../settings';
+import { loadSettings, syncSpeedSelectFromStored } from '../settings';
 import { createContentLogger } from '../log';
 import { formatVoiceName } from './format';
 import { filterVoices, selectVoice } from './dropdown';
-import { resolveVoiceForText } from './voice-selection';
+import { ensureVoiceSelected } from './voice-selection';
+import type { ExtensionSettings } from '../../shared/types';
 
 const logger = createContentLogger('voices');
 
@@ -59,6 +60,27 @@ async function loadVoicesFromServerWithRetry(options = {}) {
   }
 
   throw lastError || new Error('Failed to load voices');
+}
+
+/**
+ * 恢复用户手选音色：存储中有且在当前目录内则沿用（标记手选），
+ * 否则按界面语言派生默认音色（不落盘，跟随界面语言）。
+ * 返回存储设置供调用方继续恢复语速等其余项。
+ */
+async function restoreVoiceSelection(): Promise<Partial<ExtensionSettings>> {
+  const settings = await loadSettings();
+  const savedName = settings.selectedVoice || null;
+  const savedVoice = savedName ? state.allVoices.find((v) => v.name === savedName) : null;
+  if (savedVoice) {
+    selectVoice(savedVoice);
+    state.voiceSearchInput!.value = formatVoiceName(savedVoice);
+    updateClearButton();
+    logger.debug('Restored saved voice:', savedVoice.name);
+  } else {
+    ensureVoiceSelected();
+    logger.debug('No saved voice in list, using interface-language default');
+  }
+  return settings;
 }
 
 export async function loadVoices(options = {}) {
@@ -124,42 +146,11 @@ export async function loadVoices(options = {}) {
       updateButtonStates();
       filterVoices('');
 
-      // Restore saved voice and continue with existing logic
-      const settings = await loadSettings();
-      if (!state.autoDetectLanguage) {
-        // 手选模式：恢复用户保存的音色；保存的音色不在列表里（如切换 provider 后）
-        // 或从未选过，则回到自动检测模式
-        if ((settings as any).selectedVoice) {
-          const savedVoice = state.allVoices.find((v) => v.name === (settings as any).selectedVoice);
-          if (savedVoice) {
-            selectVoice(savedVoice, false);
-            state.voiceSearchInput!.value = formatVoiceName(savedVoice);
-            if (typeof updateClearButton === 'function') updateClearButton();
-            logger.debug('Restored saved voice:', savedVoice.name);
-          } else {
-            state.autoDetectLanguage = true;
-            if (state.toggleCheckboxes.autoDetectLanguage) state.toggleCheckboxes.autoDetectLanguage.checked = true;
-            saveSettings();
-            logger.debug('Saved voice not found, enabled auto-detect');
-          }
-        } else {
-          state.autoDetectLanguage = true;
-          if (state.toggleCheckboxes.autoDetectLanguage) state.toggleCheckboxes.autoDetectLanguage.checked = true;
-          saveSettings();
-          logger.debug('No voice selected, enabled auto-detect');
-        }
-      }
+      // 恢复用户手选音色，或按界面语言派生默认音色（落实为单一来源 selectedVoice）
+      const settings = await restoreVoiceSelection();
 
       if (state.speedSelect) {
-        (state as any).playbackSpeed = syncSpeedSelectFromStored(state.speedSelect, (settings as any).playbackSpeed);
-      }
-
-      // 自动检测模式且有正文：按正文选音色并落实为单一来源 selectedVoice（不再只回显搜索框）
-      const existingText = (state.textContent!.textContent || state.textContent!.innerText || '').trim();
-      if (state.autoDetectLanguage && existingText.length > 20) {
-        logger.debug('Voices loaded, checking existing text...');
-        const resolved = resolveVoiceForText(existingText);
-        if (resolved && typeof updateClearButton === 'function') updateClearButton();
+        (state as any).playbackSpeed = syncSpeedSelectFromStored(state.speedSelect, settings.playbackSpeed);
       }
 
       updatePlayButtonState();
@@ -258,44 +249,11 @@ async function loadVoicesFromServer(silent = false, options = {}) {
 
       filterVoices('');
 
-      // 恢复用户手选音色（仅手选模式）；autoDetect 开启时保留现有 selectedVoice，
-      // 由下方按正文的检测落实为单一来源
-      const settings = await loadSettings();
-
-      if (!state.autoDetectLanguage) {
-        // 手选模式：恢复用户保存的音色；保存的音色不在列表里（如切换 provider 后）
-        // 或从未选过，则回到自动检测模式
-        if ((settings as any).selectedVoice) {
-          const savedVoice = state.allVoices.find((v) => v.name === (settings as any).selectedVoice);
-          if (savedVoice) {
-            selectVoice(savedVoice, false);
-            state.voiceSearchInput!.value = formatVoiceName(savedVoice);
-            if (typeof updateClearButton === 'function') updateClearButton();
-            logger.debug('Restored saved voice:', savedVoice.name);
-          } else {
-            state.autoDetectLanguage = true;
-            if (state.toggleCheckboxes.autoDetectLanguage) state.toggleCheckboxes.autoDetectLanguage.checked = true;
-            saveSettings();
-            logger.debug('Saved voice not found, enabled auto-detect');
-          }
-        } else {
-          state.autoDetectLanguage = true;
-          if (state.toggleCheckboxes.autoDetectLanguage) state.toggleCheckboxes.autoDetectLanguage.checked = true;
-          saveSettings();
-          logger.debug('No voice selected, enabled auto-detect');
-        }
-      }
+      // 恢复用户手选音色，或按界面语言派生默认音色（落实为单一来源 selectedVoice）
+      const settings = await restoreVoiceSelection();
 
       if (state.speedSelect) {
-        (state as any).playbackSpeed = syncSpeedSelectFromStored(state.speedSelect, (settings as any).playbackSpeed);
-      }
-
-      // 自动检测模式且有正文：按正文选音色并落实为单一来源 selectedVoice（不再只回显搜索框）
-      const existingText = (state.textContent!.textContent || state.textContent!.innerText || '').trim();
-      if (state.autoDetectLanguage && existingText.length > 20) {
-        logger.debug('Voices loaded, checking existing text...');
-        const resolved = resolveVoiceForText(existingText);
-        if (resolved && typeof updateClearButton === 'function') updateClearButton();
+        (state as any).playbackSpeed = syncSpeedSelectFromStored(state.speedSelect, settings.playbackSpeed);
       }
 
       // Update button state

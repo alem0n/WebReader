@@ -180,6 +180,8 @@ export async function switchEngine(engine: EngineTab): Promise<void> {
     state.allVoices = [];
     state.filteredVoices = [];
     state.selectedVoice = null;
+    // 音色目录随引擎变化：撤销手选标记，让重载按界面语言派生新引擎的默认音色
+    state.voiceSelectionIsManual = false;
     const searchInput = document.getElementById('voice-search') as HTMLInputElement | null;
     if (searchInput) searchInput.value = '';
     try {

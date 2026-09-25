@@ -5,7 +5,6 @@
  * 内部转发到当前模块实现。
  */
 import { state } from '../state';
-import { logger } from '../log';
 import { filterVoices, formatVoiceName } from '../voices';
 import { updatePlayButtonState } from '../ui';
 import { handleStop } from '../player';
@@ -21,17 +20,5 @@ export function installGlobalBridge(): void {
   };
   window.edgeTTSStopPlayback = () => {
     handleStop();
-  };
-  window.edgeTTSEnableAutoDetectIfNoVoice = () => {
-    // Only enable auto-detect if no voice is selected
-    if (!state.selectedVoice) {
-      state.autoDetectLanguage = true;
-      const cb = state.toggleCheckboxes.autoDetectLanguage;
-      if (cb) cb.checked = true;
-      logger.debug('Auto-detect enabled (no voice selected)');
-    } else {
-      logger.debug('Voice already selected, keeping it:', state.selectedVoice.name);
-    }
-    updatePlayButtonState();
   };
 }

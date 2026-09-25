@@ -124,11 +124,12 @@ await esbuild.build({
             export function removeSquareBrackets(s) { return s; }
             export function handleStop() { window.__calls.stop++; }
             export function formatVoiceName(v) { return v; }
+            export function pickDefaultVoice() { return null; }
+            export function updateClearButton() {}
             export function applyParentheticalFilter(t) { return t; }
             export function getParentheticalRemovedRanges() { return []; }
             export function subtractCharRanges(start, end) { return [{ start, end }]; }
             export function mergeCharRanges(r) { return r; }
-            export function detectLanguage() { return null; }
             export function createLogger() { return { debug() {}, info() {}, warn() {}, error() {} }; }
             export function debounce(fn) { return fn; }
             export function limitFloat(n) { return n; }

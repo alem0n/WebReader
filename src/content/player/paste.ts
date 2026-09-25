@@ -31,9 +31,6 @@ export async function handlePaste() {
       // 粘贴内容与整页映射无关：作废规范路径，回退到 setText 切分
       state.pageTextUnits = null;
       state.pageTextMap = null;
-      if (window.edgeTTSEnableAutoDetectIfNoVoice) {
-        window.edgeTTSEnableAutoDetectIfNoVoice();
-      }
       setTimeout(() => {
         if (state.playPauseBtn && !state.playPauseBtn.disabled) {
           logger.debug('Starting automatic playback...');

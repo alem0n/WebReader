@@ -8,7 +8,8 @@ export const state = {
   filteredVoices: [] as PresetVoice[],
   selectedVoice: null as PresetVoice | null,
   isLoading: false,
-  autoDetectLanguage: true,
+  /** 音色是否为用户显式选择：true 沿用手选音色，false 按界面语言派生默认音色 */
+  voiceSelectionIsManual: false,
   removeParentheticals: true, // 朗读前删除括号及其中的内容（可开关，默认开）
   // 以下两个开关仅在网页悬浮窗侧产生实际效果，popup 侧只作全局配置中转：
   // 修改后写入存储，对「正在朗读」不生效，下次开始朗读时由 content 读入

@@ -153,8 +153,8 @@ export function updatePlayButtonState() {
   logger.debug('updatePlayButtonState called');
   const text = (state.textContent!.textContent || state.textContent!.innerText || '').trim();
   const hasText = text.length > 0;
-  const hasVoiceOrAutoDetect = state.selectedVoice !== null || state.autoDetectLanguage;
-  const shouldEnable = hasText && hasVoiceOrAutoDetect && !state.isLoading;
+  const hasVoice = state.selectedVoice !== null;
+  const shouldEnable = hasText && hasVoice && !state.isLoading;
 
   (state.playPauseBtn as any).disabled = !shouldEnable;
 
@@ -164,8 +164,7 @@ export function updatePlayButtonState() {
       hasText,
       textLength: text.length,
       selectedVoice: state.selectedVoice?.name || null,
-      autoDetectLanguage: state.autoDetectLanguage,
-      hasVoiceOrAutoDetect,
+      hasVoice,
       isLoading: state.isLoading,
       shouldEnable,
     });

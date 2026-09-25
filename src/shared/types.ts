@@ -21,7 +21,6 @@ export interface PresetVoice {
 /** popup/content 保存到 storage 的设置 */
 export interface ExtensionSettings {
   selectedVoice: string | null;
-  autoDetectLanguage: boolean;
   removeParentheticals: boolean;
   playbackSpeed: number;
   voicePanelControlsCollapsed: boolean;

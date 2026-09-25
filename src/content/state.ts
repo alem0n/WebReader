@@ -44,7 +44,8 @@ interface ContentState {
    * 新建播放 / 停止 / 清空时重置（原 player 模块级状态，拆分后收敛到此处） */
   localFallbackActive: boolean;
   currentChunkInfo: ChunkInfo | null;
-  autoDetectLanguage: boolean;
+  /** 音色是否为用户显式选择：true 沿用手选音色，false 按界面语言派生默认音色 */
+  voiceSelectionIsManual: boolean;
   removeParentheticals: boolean;
   playbackSpeed: number;
   sentencePlayer: SentencePlayer | null;
@@ -142,7 +143,7 @@ export const state: ContentState = {
   isCancelled: false,
   localFallbackActive: false,
   currentChunkInfo: null,
-  autoDetectLanguage: true,
+  voiceSelectionIsManual: false,
   removeParentheticals: true,
   playbackSpeed: 1.0,
   sentencePlayer: null,

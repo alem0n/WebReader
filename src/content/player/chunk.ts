@@ -14,7 +14,6 @@ import type { PresetVoice } from '../../shared/types';
 import { state } from '../state';
 import { showError, updateButtonStates, updateTimeProgress, updateStatusText } from '../ui';
 import * as localTts from '../../shared/local-tts';
-import { detectLanguage } from '../../shared/detect-language';
 import { limitFloat } from '../../shared/utils';
 import { createContentLogger } from '../log';
 import { onSentenceChanged } from './entire-page';
@@ -155,9 +154,9 @@ function playSentenceLocal(voice: PresetVoice, sentenceIndex: number): void {
   updateButtonStates();
 
   // 语速映射到 speechSynthesis rate（界面档位 0.5–2.5 落在合法区间内，钳制兜底）
+  // 语言跟随当前音色（单一来源）：不再按正文检测，与 MiMo 路径用同一个音色语言
   const rate = limitFloat(state.playbackSpeed, 0.1, 10);
-  // 语言：检测失败时按脚本回退（含汉字→中文，否则英文）
-  const lang = detectLanguage(text) || (/[\u4E00-\u9FFF\u3400-\u4DBF]/.test(text) ? 'zh-CN' : 'en-US');
+  const lang = voice.language || 'en-US';
 
   const started = localTts.speak(text, lang, {
     rate,

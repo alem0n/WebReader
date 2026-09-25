@@ -41,7 +41,6 @@ declare global {
     edgeTTSUpdatePlayButton?: () => void;
     edgeTTSGetSelectedVoice?: () => any;
     edgeTTSStopPlayback?: () => void;
-    edgeTTSEnableAutoDetectIfNoVoice?: () => void;
     playSelectedText?: (text: string) => void;
     playEntirePage?: () => Promise<void>;
     ttsWidgetShadowRoot?: ShadowRoot | null;

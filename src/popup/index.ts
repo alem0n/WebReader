@@ -5,7 +5,7 @@ import { logger } from './log';
 import { loadInterfaceLanguage, toggleInterfaceLanguage } from './i18n';
 import { checkApiKeyStatus, loadVoicesWithRetry } from './api-key-ui';
 import { setConfigPanelOpen, syncEngineFromStorage, updateConfigToggleLabel, refreshRelayStatus } from './config-ui';
-import { filterVoices } from './voices';
+import { filterVoices, ensureVoiceSelected } from './voices';
 import { loadStoredSettings, saveSettings } from './settings';
 import { populateSpeedOptions } from '../shared/settings';
 import { i18n } from './i18n';
@@ -59,10 +59,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 /** 各开关 change 时的额外副作用（通用逻辑已处理 state 写入、持久化与依赖联动） */
 const TOGGLE_CHANGE_HANDLERS: Partial<Record<ToggleKey, (checked: boolean) => void>> = {
-  autoDetectLanguage: (checked) => {
-    // 自动检测接管音色选择：清空已选音色，但保留搜索框显示
-    if (checked) state.selectedVoice = null;
-  },
+  // 音色默认值改由界面语言派生（docs/adr/0002），不再需要开关副作用；
+  // 保留此表作为后续开关扩展点
 };
 
 /** 读取某开关当前是否可用（被依赖开关关闭时禁用） */
@@ -185,6 +183,11 @@ export function setupEventListeners() {
   if (languageToggleBtn) {
     languageToggleBtn.addEventListener('click', async () => {
       await toggleInterfaceLanguage();
+      // 未手选音色时，默认音色跟随界面语言重新派生（落实单一来源并同步搜索框 / 下拉选中态）
+      if (!state.voiceSelectionIsManual) {
+        ensureVoiceSelected();
+        filterVoices('');
+      }
     });
   }
 }

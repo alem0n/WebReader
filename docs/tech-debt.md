@@ -16,7 +16,7 @@ TD-011 是音色状态机修复时发现的 popup 层同源缺陷，未修（见
 | --- | --- | --- | --- | --- | --- |
 | TD-001 | `content/widget.ts` 超限 | 1750 | **2020** | `widget/` 8 文件，最大 421 | `a93c6f6` + `52a61de` |
 | TD-002 | `shared/language-names.ts` 超限 | 1629 | 1629 | `language-names/` 21 文件，最大 212 | `ee59693` |
-| TD-003 | `shared/detect-language.ts` 超限 | 871 | 871 | `detect-language/` 7 文件，最大 241 | `94bd687` |
+| TD-003 | `shared/detect-language.ts` 超限 | 871 | 871 | 已删除（ADR 0002 取消自动检测后零引用） | `94bd687` 拆分 / 本次删除 |
 | TD-004 | `content/player.ts` 超限 | 789 | **905** | `player/` 8 文件，最大 208 | `4ce867b` |
 | TD-005 | `public/popup.css` 超限 | 699 | **820** | 7 个 `.css`，最大 324 | `764c77d` |
 | TD-006 | `content/index.ts` 超限 | 699 | **829** | `index.ts` 148 + `widget-init/` 8 文件（最大 159）+ `background-messages.ts` + `page-listeners.ts` | `67b3e1a` |
@@ -24,7 +24,7 @@ TD-011 是音色状态机修复时发现的 popup 层同源缺陷，未修（见
 | TD-008 | `content/ui.ts` 超限 | 503 | 503 | `ui/` 7 文件，最大 316 | `6e7ca42` |
 | TD-009 | `PresetVoice.gender` 注释过时 | — | — | 注释修正 | `1f6ed71` |
 | TD-010 | `content/voices.ts` 超限（漏登） | — | 560 | `voices/` 4 文件，最大 353 | `35cb101` |
-| TD-011 | popup 层音色状态机同源缺陷（未修） | — | — | 见 TD-011 条目 | 待后续分支 |
+| TD-011 | popup 层音色状态机同源缺陷 | — | — | 已随 ADR 0002 关闭（互斥状态机删除） | 本次 |
 
 > 「原登记行数」来自本表旧版本；**实测行数**用正确方法重新统计（见下节），
 > 多数条目被低估。此后登记行数一律以实测为准。
@@ -77,14 +77,17 @@ require('fs').readFileSync(path, 'utf8').split('\n').length;
   `gender-translations` + 17 个按语言文件 + `index.ts` 聚合 5 个公共导出）。
 - **保真**：39 张表与旧文件逐键 0 差异。
 
-### TD-003 — `shared/detect-language.ts`（871 行）
+### TD-003 — `shared/detect-language.ts`（871 行）—— 已随 ADR 0002 整体删除
 
-- **方案**：先补 `test/detect-language.behavior.mjs`（36 例）锁定既有行为，
+- **原方案**：先补 `test/detect-language.behavior.mjs`（36 例）锁定既有行为，
   再拆为 `detect-language/`（`index` 检测编排 + 平局规则、`script-fallback`、
   `scoring` + 4 个词表）。
 - **保真**：21 个词表 0 差异，36/36 行为用例保持通过。
 - **注意**：部分样本按当前算法分类「不正确」（fr→it-IT、pt→vi-VN、ro→vi-VN、
   bg→ru-RU、nb→da-DK），属**既有行为**，测试以快照方式锁定，不得借重构「修正」。
+- **关闭（2026-09-26）**：ADR 0002 取消正文语言自动检测后，本模块零引用，
+  7 个文件、`test/detect-language.behavior.mjs` 与拆分记录一并删除。拆分时的
+  「保真」要求随之失效。若未来重新引入检测，应基于新需求重建，不复用历史实现。
 
 ### TD-004 — `content/player.ts`（实测 905 行）
 
@@ -134,21 +137,15 @@ require('fs').readFileSync(path, 'utf8').split('\n').length;
   `format ← dropdown ← loader`。
 - **保真**：11 个函数（含 3 个私有）全部一致。
 
-### TD-011 — popup 层音色状态机与 content 层同源缺陷（未修，待后续）
+### TD-011 — popup 层音色状态机与 content 层同源缺陷 —— 已随 ADR 0002 关闭
 
-- **现象**：popup 层同样把「自动检测」与「已选音色」做成交斥：`popup/index.ts:64`
-  （autoDetect 开启 → `selectedVoice = null`）与 `popup/voices.ts:68`（加载后
-  autoDetect 开启 → `selectedVoice = null`），以及清除按钮置空后 autoDetect 仍关闭
-  的不自洽态（与 content 修复前完全同构）。
-- **为何本次不修**：popup 无网页内点击跳转，该缺陷不产生「整页点击跳转失效」这类
-  现象；且 popup 层无自动化测试覆盖，改动必须浏览器手动回归（`AGENTS.md` §3），
-  与本次 content 层修复混在同一分支会扩大回归面。
-- **影响范围**：popup 主界面的音色下拉选中态 / 语言过滤 / 「清除后未重开自动检测
-  则播放报请选择音色」的脆弱性。
-- **潜在风险**：popup 与 content 是两套独立 state（`AGENTS.md` §7），不能共享修复；
-  硬套 content 的 `resolveVoiceForText` 会引入 popup 未覆盖的检测分支。
-- **移除条件**：按 content 层同一设计（`selectedVoice` 单一来源 + autoDetect 只决定
-  产生方式）重写 popup 选音色路径，并完成 popup 浏览器手动回归后删除本条。
+- **现象（历史）**：popup 层把「自动检测」与「已选音色」做成交斥：
+  `popup/index.ts`（autoDetect 开启 → `selectedVoice = null`）与
+  `popup/voices.ts`（加载后 autoDetect 开启 → `selectedVoice = null`），以及
+  清除按钮置空后 autoDetect 仍关闭的不自洽态。
+- **关闭（2026-09-26）**：ADR 0002 取消自动检测后，「自动检测 / 手选」的互斥
+  关系不复存在。popup 选音色路径已按同一设计重写为「手选优先（持久化）+
+  否则按界面语言派生」，互斥分支全部删除，popup 浏览器手动回归完成。
 
 ---
 
@@ -168,14 +165,15 @@ require('fs').readFileSync(path, 'utf8').split('\n').length;
 - **`sentence-map` / `reading-overlay` 的括号处理**：句子 span 覆盖「合并区间」，
   被剔除的括号内容仍在 span 内（随句高亮但不朗读）——不要用 `map.sentences` 长度
   断言 span 长度（见 `test/inline-reading.smoke.mjs` 的幂等用例）。
-- **`detect-language` 的既有输出不得借重构修正**（见 TD-003）。
-- **`state.selectedVoice` 是「当前要使用的音色」的单一来源**（content 层）：音色列表
-  加载完成且有正文后不为 null。`autoDetectLanguage` 只决定它由检测产生还是用户手选——
-  开启时由 `voices/voice-selection.resolveVoiceForText` 在「开始播放 / 开关开启 /
-  加载完成且有正文」时检测并写入（含「检测为空脚本回退」与「无匹配音色回退
-  mimo_default」两道兜底）；关闭时是用户手选值。`navigation.jumpToSentence`、
-  下拉选中态（`dropdown.renderVoiceDropdown`）、语言过滤（`filterVoices`）一律只读
-  `selectedVoice`，**不得重新检测**。任何「autoDetect 开启就置 `selectedVoice = null`"
+- **`detect-language` 已删除**（ADR 0002）：本条与 TD-003 一并关闭，不再约束。
+- **`state.selectedVoice` 是「当前要使用的音色」的单一来源**（两层同构）：音色列表
+  加载完成后不为 null。`voiceSelectionIsManual` 只决定它由谁产生——`true` 为
+  用户手选（按 name 持久化，界面语言切换不覆盖）；`false` 时由
+  `voices/voice-selection.ensureVoiceSelected` → `shared/voice-default.pickDefaultVoice`
+  按界面语言派生并写入（不落盘，跟随界面语言），调用点为「音色加载完成 /
+  界面语言切换 / 开始播放」三处。`navigation.jumpToSentence`、下拉选中态
+  （`dropdown.renderVoiceDropdown`）、语言过滤（`filterVoices`）一律只读
+  `selectedVoice`，**不得重新派生**。任何「派生即置 `selectedVoice = null`"
   的写法都是本设计的反面（曾导致整页朗读点击跳转失效）。
 
 ## 关联

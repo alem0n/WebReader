@@ -9,7 +9,7 @@ export { syncSpeedSelectFromStored };
 
 export async function saveSettings(): Promise<void> {
   const settings: Partial<ExtensionSettings> & Record<string, unknown> = {
-    selectedVoice: state.selectedVoice ? state.selectedVoice.name : null,
+    selectedVoice: state.voiceSelectionIsManual && state.selectedVoice ? state.selectedVoice.name : null,
     playbackSpeed: state.playbackSpeed,
     voicePanelControlsCollapsed: !!(voiceSelectorEl && voiceSelectorEl.classList.contains('voice-selector--collapsed')),
   };

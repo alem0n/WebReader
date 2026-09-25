@@ -67,7 +67,7 @@
 | 模型 | 本项目位置 | 边界守则 |
 | --- | --- | --- |
 | 协议模型 | `shared/types.ts`（background 消息联合）+ `tts-relay` 的 `/v1/*` HTTP 契约 | 只描述跨边界协议，不含层内状态；改动即 §1.2 冻结点 |
-| 领域模型 | 句子切分 / 段落单元 / 语言检测 / 音色目录 / TTS 重试分类（`sentence-player` / `extractor` / `sentence-map` / `detect-language` / `tts.ts` 等） | 纯逻辑，不依赖 DOM 与层 state；需要状态就改为参数传入 |
+| 领域模型 | 句子切分 / 段落单元 / 默认音色派生 / 音色目录 / TTS 重试分类（`sentence-player` / `extractor` / `sentence-map` / `voice-default` / `tts.ts` 等） | 纯逻辑，不依赖 DOM 与层 state；需要状态就改为参数传入 |
 | 持久化模型 | `shared/settings.ts` + storage 键（`constants.ts`）+ `chrome.storage` 读写 | 键名是面向老用户数据的对外契约；视图层不得绕过存储层直写 storage |
 | 视图模型 | `popup/state.ts` / `content/state.ts`（各含 DOM 引用）+ 各层 `ui.ts` | 两层视图模型互不 import，形状不得泄漏进 `shared` |
 
@@ -81,7 +81,7 @@
 ```
 src/
   shared/       ★ 跨层共享：类型 / 常量 / 消息封装 / TTS / 合成重试与并发 /
-                 句子播放 / 音频缓存 / 语言检测 / 本地音色容灾 / 开关声明表 /
+                 句子播放 / 音频缓存 / 默认音色派生 / 本地音色容灾 / 开关声明表 /
                  工具 / 日志 —— content 与 popup 共用同一份
   background/   ★ Service Worker：provider 路由 + MiMo 代理 + 后端中转客户端 +
                  API Key / 中转配置管理 + 右键菜单 + i18n 语言文件
@@ -116,6 +116,7 @@ esbuild.config.mjs  三入口构建（content / popup / background）+ public �
 | `widget ↔ index` 用钩子注册而非直接 import | createWidget 创建挂载后需要 initWidget 绑定事件，而 initWidget 又要拿 widget 内的 DOM —— 直接互引是循环依赖。改为 index 通过 `setWidgetInitializer` 注册钩子，widget 不反向依赖 index |
 | provider 路由对下游透明 | `ttsSpeech` / `getPresetVoices` 消息体与 `TtsResponse` 契约**不随 provider 变化**（provider 由 background 从存储读取路由）；音频缓存键含 provider（`${index}-${provider}-${voice}-${speed}`）使两链路互不污染；下游 `base64ToBlob` / `audio-cache` / `sentence-player` / `web-audio-player` 零改动 |
 | 新增开关只改 `shared/toggle-settings.ts` 声明表 | 数据驱动两层 UI 自动渲染 + 持久化键派生 + `dependsOn` 从属联动，避免 popup / 悬浮窗两处模板不同步 |
+| 默认音色按界面语言派生，取消正文语言自动检测 | 检测收益低（MiMo 仅中英语色）且误判体感差；界面语言只有中 / 英两档，直接映射音色语言前缀即可。`selectedVoice` 保持单一来源，`voiceSelectionIsManual` 区分手选（持久化）与派生（跟随界面语言）。见 [ADR 0002](docs/adr/0002-voice-default-from-interface-language.md) |
 | 网页内逐句高亮**不覆盖原文** | 只把正在朗读的句子对应的文本节点包进透明 span 加高亮类，原文内容 / 结构 / 样式完全不变 |
 | 新功能文案**写死中文**，不新增 i18n 键 | 避免 i18n 键膨胀；`_locales` 键保持既有集合不变。仅界面语言切换（`interfaceLanguage`）走既有 i18n 键 |
 | 括号匹配**不处理**书名号 `《》`、引号 `「」『』`、尖括号 `<>` | 避免误删书名与数学/代码符号（`stripParentheticals` 只处理圆/方/花括号及全角形式） |
@@ -205,7 +206,7 @@ npm run verify:all
 
 **浏览器手动回归清单**（popup / content 改动后必跑）：
 选中朗读（划词 → 绿色按钮 / 右键菜单）、整页朗读（悬浮窗 + popup 快捷操作 + 页内悬浮按钮）、
-音色选择与搜索、provider 切换与后端中转配置自检、自动语言检测开关、语速选择、
+音色选择与搜索、provider 切换与后端中转配置自检、默认音色跟随界面语言与手选持久化、语速选择、
 「删除括号内容」开关、网页内逐句高亮与点击跳转、本地音色容灾（不填 Key 朗读）、
 API Key 配置与保存、悬浮窗拖拽 / 最小化 / 主题切换、粘贴并朗读。
 

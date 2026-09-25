@@ -68,8 +68,9 @@ export function addTextToTextareaAndPlay(text: string) {
     }
 
     // Check if all necessary elements are present and initialized
-    if (state.textContent && state.playPauseBtn && state.toggleCheckboxes.autoDetectLanguage) {
-      logger.debug('Adding text and playing, auto-detect was:', state.autoDetectLanguage);
+    // （removeParentheticals 是开关表首项，其存在证明开关列已渲染、widget 已初始化）
+    if (state.textContent && state.playPauseBtn && state.toggleCheckboxes.removeParentheticals) {
+      logger.debug('Adding text and playing, voice is manual:', state.voiceSelectionIsManual);
 
       // Replace text in content div (overwrite existing text)
       state.textContent.textContent = text;
@@ -77,11 +78,6 @@ export function addTextToTextareaAndPlay(text: string) {
       logger.debug('Text set:', text.substring(0, 50) + '...');
       logger.debug('textContent.textContent:', state.textContent.textContent.substring(0, 50));
       logger.debug('textContent visible:', state.textContent.offsetHeight, 'px');
-
-      // Enable auto-detect only if no voice is selected
-      if (window.edgeTTSEnableAutoDetectIfNoVoice) {
-        window.edgeTTSEnableAutoDetectIfNoVoice();
-      }
 
       // Give a moment for the content to update, then start playback immediately
       setTimeout(() => {

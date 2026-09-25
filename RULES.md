@@ -15,7 +15,7 @@ WebReader：浏览器网页朗读扩展（Chrome MV3）。四层结构 + 一个�
 （state / DOM / 事件），background 只做 provider 路由、消息代理与凭据管理。**
 
 **模型边界（原则 3）**：协议模型（`shared/types.ts` 的消息联合 + `tts-relay` 的 `/v1/*`
-HTTP 契约）、领域模型（句子切分 / 正文采集 / 语言检测 / 音色目录 / TTS 重试分类）、
+HTTP 契约）、领域模型（句子切分 / 正文采集 / 默认音色派生 / 音色目录 / TTS 重试分类）、
 持久化模型（`shared/settings.ts` + storage 键 + `chrome.storage`）、视图模型
 （`popup` / `content` 各自的 `state.ts` + `ui.ts`）四类**不得互相泄漏**；
 完整映射表与边界守则见 `AGENTS.md` §0.2，本文各层「修改要点」即按此边界展开。
@@ -84,9 +84,10 @@ src/background   src/popup     src/content
   段落结构保留、长句拆分）、段落分隔、object URL 清理。**纯算法**，不依赖 DOM。
 - `audio-cache.ts` — `AudioCacheManager`：生产者-消费者预取缓存（`start` / `ensure`
   / `setCurrentIndex` / `stop` / `clear`）；**缓存键含 provider**，两链路互不污染。
-- `detect-language/` — 加权分数语言检测（`index.ts` 的 `detectLanguage` 编排与平局规则 +
-  `script-fallback.ts` 短文本字符脚本回退 + `scoring.ts` 与 4 个词表）；**纯函数**，
-  既有输出已由 `test/detect-language.behavior.mjs` 快照锁定，不得借重构「修正」。
+- `detect-language/` — **已删除**（ADR 0002：默认音色改由界面语言派生后检测零引用）。
+- `voice-default.ts` — 默认音色派生（**纯函数**）：`pickDefaultVoice(voices, locale)`
+  把界面语言映射到音色主语言前缀（zh_CN→zh、en→en，未知回退 en），取目录首个匹配
+  音色，无匹配回退 `mimo_default`；`getVoiceLangForInterfaceLanguage`。决策见 ADR 0002。
 - `language-names/` — 语言 / 国家 / 性别名翻译常量表（`index.ts` 聚合 5 个公共导出 +
   按语言的常量文件；供 i18n 显示用）。
 - `settings.ts` — 设置存储层：`persistSettings` / `readSettings`、provider 读写
@@ -180,22 +181,24 @@ src/background   src/popup     src/content
   **拼接顺序即级联顺序，不得随意调换段落顺序**）。
 - `ui/` — 按钮状态 / 禁用提示 / 拖拽 / 高亮 / 主题（screens / drag / time-progress /
   text-highlight / controls / tooltips，`index.ts` 再导出 23 个公共符号）。
-- `player/` — 播放控制：`playback`（开始播放三态判定；autoDetect 开启时调
-  `voices/voice-selection.resolveVoiceForText` 落实音色单一来源）/ `chunk`（MiMo 路径 Web Audio
-  与本地容灾 speechSynthesis 双分支的单句循环）/ `navigation`（上一句 / 下一句 /
-  跳转，防抖 + 请求作废；跳转直接复用 `state.selectedVoice`，不重复检测）/ `entire-page`（整页收集与句子映射生命周期）/
+- `player/` — 播放控制：`playback`（开始播放三态判定，调
+  `voices/voice-selection.ensureVoiceSelected` 落实音色单一来源）/ `chunk`（MiMo 路径 Web Audio
+  与本地容灾 speechSynthesis 双分支的单句循环；本地容灾语言取自所选音色的
+  `voice.language`，不再检测正文）/ `navigation`（上一句 / 下一句 /
+  跳转，防抖 + 请求作废；跳转直接复用 `state.selectedVoice`，不重复派生）/ `entire-page`（整页收集与句子映射生命周期）/
   `stop-clear` / `paste`（粘贴并朗读 + Google Docs 引导）/ `scroll`。
 - `voices/` — 音色加载 / 过滤 / 搜索 / 下拉 / 选择（`loader` 缓存与拉取 + `dropdown`
-  过滤 / 渲染 / 选择 + `format` 显示格式化纯函数 + `voice-selection` 自动检测
-  选音色；悬浮窗内，目录随 provider 切换）。
+  过滤 / 渲染 / 选择 + `format` 显示格式化纯函数 + `voice-selection`
+  `ensureVoiceSelected` 选音色；悬浮窗内，目录随 provider 切换）。
   - **不变式：`state.selectedVoice` 是「当前要使用的音色」的单一来源**，音色列表
-    加载完成且有正文后不为 null。`autoDetectLanguage` 只决定它由检测产生还是
-    用户手选：开启时由 `voice-selection.resolveVoiceForText` 在「开始播放 /
-    开关开启 / 加载完成且有正文」时检测并**写入** `selectedVoice`（含「检测为空
-    脚本回退」与「无匹配音色回退 mimo_default」两道兜底）；关闭时是用户手选值。
-    `navigation.jumpToSentence` 与下拉选中态 / 语言过滤一律只读 `selectedVoice`，
-    不得重新检测——跳转重新检测曾导致整页朗读点击跳转失效。清除按钮 = 回到
-    自动检测（避免「selectedVoice 为空且自动检测关闭」的不自洽态）。
+    加载完成后不为 null。`voiceSelectionIsManual` 只决定它由谁产生：`true` 为
+    用户手选（按 name 持久化，界面语言切换不覆盖）；`false` 时由
+    `ensureVoiceSelected` → `shared/voice-default.pickDefaultVoice` 按界面语言
+    派生默认音色并**写入** `selectedVoice`（不落盘，跟随界面语言），调用点为
+    「音色加载完成 / 界面语言切换 / 开始播放」三处。`navigation.jumpToSentence`
+    与下拉选中态 / 语言过滤一律只读 `selectedVoice`，不得重新派生——跳转重新
+    选音色曾导致整页朗读点击跳转失效。清除按钮 = 回到跟随界面语言（撤销手选
+    标记后重新派生，避免「selectedVoice 为空」的不自洽态）。决策见 ADR 0002。
 - `selection.ts` — 划词后的绿色朗读按钮（Shadow DOM 注入样式，跟随左键抬起位置）。
 - `text-input.ts` — 选中朗读 / 粘贴预处理（去 HTML 标签 / 方括号）。
 - `page-fab.ts` — 页面内「朗读整页」悬浮按钮：可拖动 + 3 秒无点击自动吸附边缘，

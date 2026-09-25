@@ -104,12 +104,6 @@ export function applyInterfaceLanguage(locale: string): void {
     voiceSearchInput.placeholder = i18n('voice_search_placeholder');
   }
 
-  // Update auto-detect checkbox label
-  const autoDetectLabel = document.querySelector('#auto-detect-language + span');
-  if (autoDetectLabel) {
-    autoDetectLabel.textContent = i18n('auto_detect_language');
-  }
-
   // Update loading voices text
   const loadingVoicesSpan = voiceLoadingIndicator?.querySelector('span');
   if (loadingVoicesSpan) {
