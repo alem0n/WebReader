@@ -14,6 +14,7 @@ import { createContentLogger } from '../log';
 import { formatVoiceName } from './format';
 import { filterVoices, selectVoice } from './dropdown';
 import { ensureVoiceSelected } from './voice-selection';
+import { resolveRestoredVoice } from '../../shared/voice-restore';
 import type { ExtensionSettings } from '../../shared/types';
 
 const logger = createContentLogger('voices');
@@ -63,14 +64,16 @@ async function loadVoicesFromServerWithRetry(options = {}) {
 }
 
 /**
- * 恢复用户手选音色：存储中有且在当前目录内则沿用（标记手选），
+ * 恢复用户手选音色：存储中**显式标记为手选**且在当前目录内则沿用，
  * 否则按界面语言派生默认音色（不落盘，跟随界面语言）。
  * 返回存储设置供调用方继续恢复语速等其余项。
+ *
+ * 判据见 shared/voice-restore：旧版自动检测落盘的 selectedVoice 没有手选标志，
+ * 一律按界面语言重新派生，避免中文界面恢复英文音色（自愈迁移）。
  */
 async function restoreVoiceSelection(): Promise<Partial<ExtensionSettings>> {
   const settings = await loadSettings();
-  const savedName = settings.selectedVoice || null;
-  const savedVoice = savedName ? state.allVoices.find((v) => v.name === savedName) : null;
+  const savedVoice = resolveRestoredVoice(settings, state.allVoices);
   if (savedVoice) {
     selectVoice(savedVoice);
     state.voiceSearchInput!.value = formatVoiceName(savedVoice);

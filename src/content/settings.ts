@@ -13,6 +13,7 @@ export async function saveSettings(): Promise<void> {
   const voiceSelForSave = widget ? widget.querySelector('.voice-selector') : null;
   const settings: Partial<ExtensionSettings> & Record<string, unknown> = {
     selectedVoice: state.voiceSelectionIsManual && state.selectedVoice ? state.selectedVoice.name : null,
+    voiceSelectionIsManual: !!(state.voiceSelectionIsManual && state.selectedVoice),
     playbackSpeed: state.playbackSpeed,
     voicePanelControlsCollapsed: !!(voiceSelForSave && voiceSelForSave.classList.contains('voice-selector--collapsed')),
   };

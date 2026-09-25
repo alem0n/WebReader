@@ -25,6 +25,7 @@ TD-011 是音色状态机修复时发现的 popup 层同源缺陷，未修（见
 | TD-009 | `PresetVoice.gender` 注释过时 | — | — | 注释修正 | `1f6ed71` |
 | TD-010 | `content/voices.ts` 超限（漏登） | — | 560 | `voices/` 4 文件，最大 353 | `35cb101` |
 | TD-011 | popup 层音色状态机同源缺陷 | — | — | 已随 ADR 0002 关闭（互斥状态机删除） | 本次 |
+| TD-012 | 旧版自动检测残留 selectedVoice 顶替界面语言默认 | — | — | 新增 voiceSelectionIsManual 持久化标志 + shared/voice-restore 判据 | 本次 |
 
 > 「原登记行数」来自本表旧版本；**实测行数**用正确方法重新统计（见下节），
 > 多数条目被低估。此后登记行数一律以实测为准。
@@ -146,6 +147,33 @@ require('fs').readFileSync(path, 'utf8').split('\n').length;
 - **关闭（2026-09-26）**：ADR 0002 取消自动检测后，「自动检测 / 手选」的互斥
   关系不复存在。popup 选音色路径已按同一设计重写为「手选优先（持久化）+
   否则按界面语言派生」，互斥分支全部删除，popup 浏览器手动回归完成。
+
+### TD-012 — 旧版自动检测残留 `selectedVoice` 顶替界面语言默认音色
+
+- **现象**：从旧版（带正文语言自动检测）升级的用户，插件界面为中文时默认音色却是
+  英文（如「英语 - Mia」）。
+- **原因**：旧版 `resolveVoiceForText` 把**检测出的**音色写入 `state.selectedVoice`，
+  `saveSettings` 直接落盘 name（`state.selectedVoice ? state.selectedVoice.name : null`），
+  没有区分「用户手选」与「自动检测」。ADR 0002 重写为「手选优先 + 界面语言派生」后，
+  恢复链路（`content/voices/loader.restoreVoiceSelection` / `popup/voices.loadVoices`）
+  只要存储有 name 就当手选恢复并置 `voiceSelectionIsManual = true`，于是旧版残留的英文
+  音色顶替了按界面语言派生的中文默认；被误标手选后 `saveSettings` 又把它以手选身份写回，
+  旧数据永远清不掉（自延续）。
+- **修复**：新增持久化标志 `ExtensionSettings.voiceSelectionIsManual`，
+  `saveSettings`（两层）显式写入（手选 → `true` 并落盘 name；派生 → `false` 且 name 为 null）；
+  恢复判据抽为共享纯函数 `shared/voice-restore.resolveRestoredVoice`：只有标志显式为 `true`
+  **且**音色仍在当前目录内才沿用，否则一律重新派生。旧数据缺标志 → 按界面语言重新派生，
+  下次保存即以正确标志覆写，**一次性自愈迁移，无兼容层**（原则 10）。
+- **影响范围**：`shared/types.ts` / `shared/settings.ts`（新增存储键）/
+  `content/settings.ts` / `popup/settings.ts`（落盘）/
+  `content/voices/loader.ts` / `popup/voices.ts`（恢复判据）。
+- **验证**：`test/voice-restore.smoke.mjs`（7 例，判据矩阵）+
+  端到端复现（中文界面 + 残留 `Mia` → `中文 - MiMo-默认`）；真手选 `茉莉` 正确保留。
+  `npm run verify` 通过，全部冒烟测试绿灯。
+- **回退风险**：低。判据只新增一个布尔键，缺键时行为等同于「重新派生」，
+  与 ADR 0002 的默认语义一致。
+- **移除条件**：无需移除——标志是 ADR 0002 状态机的必要组成部分，
+  非临时兼容层。旧数据在用户首次保存后即被覆写。
 
 ---
 

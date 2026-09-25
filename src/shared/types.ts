@@ -21,6 +21,16 @@ export interface PresetVoice {
 /** popup/content 保存到 storage 的设置 */
 export interface ExtensionSettings {
   selectedVoice: string | null;
+  /**
+   * selectedVoice 是否为用户手选（区别于旧版自动检测落盘的残留）。
+   *
+   * 历史背景：旧版按正文自动检测语言，检测出的音色直接写入
+   * selectedVoice 并落盘。升级后恢复逻辑若把它当手选恢复，会顶掉按界面
+   * 语言派生的默认音色（中文界面却恢复英文音色）。新增此标志作为「这个
+   * selectedVoice 是不是用户真手选」的唯一判据，旧数据缺标志时按界面语言
+   * 重新派生，并在下次保存时以正确的标志值覆写，完成一次性自愈迁移。
+   */
+  voiceSelectionIsManual?: boolean;
   removeParentheticals: boolean;
   playbackSpeed: number;
   voicePanelControlsCollapsed: boolean;
