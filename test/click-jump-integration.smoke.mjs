@@ -4,7 +4,8 @@
  * 验证音色单一来源设计的两条不变式（docs/adr/0002）：
  *  1. jumpToSentence 直接复用 state.selectedVoice，不重新派生；
  *  2. 未手选时由 ensureVoiceSelected 按界面语言派生默认音色并落实进
- *     selectedVoice（含无匹配语种回退），派生不标记手选；手选优先于派生。
+ *     selectedVoice（无匹配语种时回退目录首个，即各引擎默认音色），派生
+ *     不标记手选；手选优先于派生。
  *
  * 真实模块：state / reading-overlay / sentence-map / player/* / page-listeners /
  * shared/voice-default（纯函数，不桩）；桩：ui / widget / i18n / text-input /
@@ -293,12 +294,13 @@ await test('英文界面 → 派生首个英文音色', () => {
   state.selectedVoice = null;
   assert.equal(ensureVoiceSelected(), EN);
 });
-await test('无匹配语种 → 回退双语默认音色 mimo_default', () => {
+await test('无匹配语种 → 回退目录首个（各引擎默认音色）', () => {
   state.interfaceLanguage = 'en';
   state.voiceSelectionIsManual = false;
   state.selectedVoice = null;
-  state.allVoices = [JA, DEFAULT]; // 无英文音色
-  assert.equal(ensureVoiceSelected(), DEFAULT, '无英文音色应回退 mimo_default');
+  // 无英文音色：回退目录首个（DEFAULT 在此，等价于双语默认音色兜底）
+  state.allVoices = [DEFAULT, JA];
+  assert.equal(ensureVoiceSelected(), DEFAULT, '无英文音色应回退目录首个');
   state.allVoices = [ZH, EN, JA, DEFAULT];
 });
 await test('音色目录为空 → 返回现状（保留 null），不崩溃', () => {

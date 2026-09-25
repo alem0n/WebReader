@@ -7,8 +7,10 @@
  * 音色目录与界面语言均由调用方传入（AGENTS.md §0.2 领域模型边界）。
  *
  * 界面语言只有 en / zh_CN 两档（见 _locales 与 language-select 的语言条），
- * 映射到音色主语言前缀；MiMo 预置音色 mimo_default 支持中英双语，作为无匹配
- * 语种时的兜底。决策见 docs/adr/0002-voice-default-from-interface-language.md。
+ * 映射到音色主语言前缀；无匹配语种时回退到目录首个音色，即各引擎的默认
+ * 音色（由 background/voices 的 VoiceProvider 保证排在首位，如 MiMo 的
+ * mimo_default 双语音色）。决策见
+ * docs/adr/0002-voice-default-from-interface-language.md。
  */
 import type { PresetVoice } from './types';
 
@@ -26,8 +28,9 @@ export function getVoiceLangForInterfaceLanguage(interfaceLanguage: string): str
 /**
  * 从音色目录中选出界面语言对应的默认音色。
  *
- * 兜底顺序：界面语言匹配的首个音色 → mimo_default（双语兜底，仅 MiMo 有）
- * → 目录首个音色 → 目录为空返回 null（音色尚未加载，调用方保留现状）。
+ * 兜底顺序：界面语言匹配的首个音色 → 目录首个音色（各引擎的默认音色，
+ * 由 VoiceProvider 保证排在首位，如 MiMo 的 mimo_default 双语音色）
+ * → 目录为空返回 null（音色尚未加载，调用方保留现状）。
  * 匹配按主语言前缀（zh 匹配 zh-CN / zh-TW，en 匹配 en-US / en-AU），
  * 不区分区域：界面语言本身不带区域信息。
  */
@@ -42,9 +45,6 @@ export function pickDefaultVoice(voices: PresetVoice[], interfaceLanguage: strin
   });
   if (matched) return matched;
 
-  // 无匹配语种：MiMo 的 mimo_default 支持中英双语，是安全兜底
-  const bilingualDefault = voices.find((v) => v.voice === 'mimo_default');
-  if (bilingualDefault) return bilingualDefault;
-
+  // 无匹配语种：回退各引擎的默认音色（目录首个，由 VoiceProvider 排序保证）
   return voices[0];
 }

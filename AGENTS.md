@@ -114,7 +114,7 @@ esbuild.config.mjs  三入口构建（content / popup / background）+ public �
 | 纯逻辑模块统一抽到 `shared/` | content 与 popup 运行环境不同但业务逻辑相同，共用一份实现避免重复与漂移 |
 | `state` / `ui` / `player` / `voices` / `i18n` 不合并 | 两层运行环境完全不同（网页 Shadow DOM vs 扩展弹窗），DOM 结构与状态生命周期不可共享；只把**无状态纯逻辑**下沉，有状态层各自保留 |
 | `widget ↔ index` 用钩子注册而非直接 import | createWidget 创建挂载后需要 initWidget 绑定事件，而 initWidget 又要拿 widget 内的 DOM —— 直接互引是循环依赖。改为 index 通过 `setWidgetInitializer` 注册钩子，widget 不反向依赖 index |
-| provider 路由对下游透明 | `ttsSpeech` / `getPresetVoices` 消息体与 `TtsResponse` 契约**不随 provider 变化**（provider 由 background 从存储读取路由）；音频缓存键含 provider（`${index}-${provider}-${voice}-${speed}`）使两链路互不污染；下游 `base64ToBlob` / `audio-cache` / `sentence-player` / `web-audio-player` 零改动 |
+| provider 路由对下游透明 | `ttsSpeech` / `getPresetVoices` 消息体与 `TtsResponse` 契约**不随 provider 变化**（provider 由 background 从存储读取路由）；音色提供由各引擎的 VoiceProvider 独立实现（`background/voices/`，ADR 0003），消息处理器只做派发，新增引擎不改消息与界面；音频缓存键含 provider（`${index}-${provider}-${voice}-${speed}`）使两链路互不污染；下游 `base64ToBlob` / `audio-cache` / `sentence-player` / `web-audio-player` 零改动 |
 | 新增开关只改 `shared/toggle-settings.ts` 声明表 | 数据驱动两层 UI 自动渲染 + 持久化键派生 + `dependsOn` 从属联动，避免 popup / 悬浮窗两处模板不同步 |
 | 默认音色按界面语言派生，取消正文语言自动检测 | 检测收益低（MiMo 仅中英语色）且误判体感差；界面语言只有中 / 英两档，直接映射音色语言前缀即可。`selectedVoice` 保持单一来源，`voiceSelectionIsManual` 区分手选（持久化）与派生（跟随界面语言）。见 [ADR 0002](docs/adr/0002-voice-default-from-interface-language.md) |
 | 网页内逐句高亮**不覆盖原文** | 只把正在朗读的句子对应的文本节点包进透明 span 加高亮类，原文内容 / 结构 / 样式完全不变 |
