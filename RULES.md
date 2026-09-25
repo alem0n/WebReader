@@ -87,7 +87,8 @@ src/background   src/popup     src/content
 - `detect-language/` — **已删除**（ADR 0002：默认音色改由界面语言派生后检测零引用）。
 - `voice-default.ts` — 默认音色派生（**纯函数**）：`pickDefaultVoice(voices, locale)`
   把界面语言映射到音色主语言前缀（zh_CN→zh、en→en，未知回退 en），取目录首个匹配
-  音色，无匹配回退 `mimo_default`；`getVoiceLangForInterfaceLanguage`。决策见 ADR 0002。
+  音色，无匹配语种时回退目录首个（各引擎默认音色，由 background/voices 的 provider
+  保证排在首位）；`getVoiceLangForInterfaceLanguage`。决策见 ADR 0002。
 - `voice-restore.ts` — 音色恢复判据（**纯函数**）：`resolveRestoredVoice(settings, voices)`
   判断持久化的 `selectedVoice` 是否应作为**用户手选**沿用。以持久化标志
   `voiceSelectionIsManual` 为唯一判据（缺标志 / false → 返回 null，调用方按界面语言
@@ -122,13 +123,20 @@ src/background   src/popup     src/content
 ### 2. `src/background/`（Service Worker）
 
 - `index.ts` — 消息路由（`chrome.runtime.onMessage` → 分发到 tts / provider / api-key /
-  relay / i18n）。
+  relay / voices / i18n）。
 - `provider.ts` — provider 解析与切换（`resolveProvider`）；读写一律走 `shared/settings`，
   保证 background / content / popup 共用同一份。
 - `tts.ts` — MiMo TTS 代理：调 OpenAI 兼容 `chat/completions`、语速→风格指令、
   音频格式探测、超时控制（`MIMO_TTS_TIMEOUT_MS`）、错误归一化。
-- `relay-tts.ts` — 后端中转客户端：fetch 用户后端 → 原始音频字节 → base64 data URL，
-  输出与 MiMo 同形状的 `TtsResponse`，下游管线零改动。
+- `relay-tts.ts` — 后端中转**合成**客户端：fetch 用户后端 → 原始音频字节 → base64
+  data URL，输出与 MiMo 同形状的 `TtsResponse`，下游管线零改动。
+- `voices/` — 音色提供方架构（与合成侧正交）：`voice-provider.ts` 定义接口
+  `VoiceProvider { provider, getVoices() }` 与注册表；`mimo-voices.ts`（本地常量
+  目录）/ `relay-voices.ts`（透传后端 `/v1/voices`）各自实现；`index.ts` 注册并
+  导出 `getVoiceProviderOrFallback`。`getPresetVoices` 消息只按 provider 派发，
+  **新增引擎 = 新增一个 provider 模块 + 注册一行**，消息处理器与界面层零改动。
+  目录首项即该引擎的默认音色（`pickDefaultVoice` 无匹配语种时回退目录首个，
+  MiMo 首项是 `mimo_default` 双语音色）。
 - `relay-config.ts` — relay 地址 / Token 的存取、脱敏、连通性自检（`/v1/health`）；
   保存时按 origin 运行时申请主机权限（`optional_host_permissions`）。
 - `api-key.ts` — MiMo API Key 读取 / 保存（`chrome.storage.local`，键 `mimo_api_key`）。
