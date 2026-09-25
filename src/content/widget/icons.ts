@@ -1,7 +1,7 @@
 /**
  * 悬浮窗 SVG 图标精灵（UI 图标 + 国旗方块），纯静态资源，无插值。
  *
- * 从 widget.ts 拆出（docs/tech-debt.md TD-001）：图标定义与悬浮窗装配逻辑分离，
+ * 从 widget.ts 拆出：图标定义与悬浮窗装配逻辑分离，
  * 改图标只动本文件，不影响创建流程。
  */
 export const WIDGET_ICON_SPRITES = `

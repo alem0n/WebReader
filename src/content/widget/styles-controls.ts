@@ -1,7 +1,7 @@
 /**
  * 悬浮窗样式 · API Key 提示 / 文本显示 / 播放控制按钮 / 状态与错误 / 滚动条。
  *
- * 从 widget/styles.ts 按分区拆出（docs/tech-debt.md TD-001）：
+ * 从 widget/styles.ts 按分区拆出：
  * 各段由 styles.ts 按原顺序聚合成单一字符串注入 Shadow DOM，级联顺序与拆分前完全一致。
  */
 export const WIDGET_STYLES_CONTROLS = `/* ==================== API Key 提示界面 ==================== */

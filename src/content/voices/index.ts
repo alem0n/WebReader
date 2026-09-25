@@ -1,7 +1,7 @@
 /**
  * voices —— 音色目录的加载与下拉交互。
  *
- * 原单文件 voices.ts 560 行（docs/tech-debt.md TD-010），按职责拆为本目录：
+ * 原单文件 voices.ts 560 行，按职责拆为本目录：
  *  - format.ts：音色显示格式化（纯函数）
  *  - loader.ts：缓存读写 + 预置音色拉取 + 重试
  *  - dropdown.ts：过滤 / 渲染 / 选择 / 高亮

@@ -1,7 +1,7 @@
 /**
  * widget —— 网页悬浮窗的创建与挂载（Shadow DOM 隔离）。
  *
- * 原单文件 widget.ts 2020 行（docs/tech-debt.md TD-001），其中约 1800 行是
+ * 原单文件 widget.ts 2020 行，其中约 1800 行是
  * SVG 图标精灵、HTML 结构模板与 CSS，真正的创建逻辑只有几十行。按「资源与
  * 装配分离」拆为本目录：
  *  - icons.ts：SVG 图标精灵（静态）

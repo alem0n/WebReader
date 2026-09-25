@@ -1,7 +1,7 @@
 /**
  * 悬浮窗 HTML 结构模板。
  *
- * 从 widget.ts 拆出（docs/tech-debt.md TD-001）：结构模板与创建流程分离。
+ * 从 widget.ts 拆出：结构模板与创建流程分离。
  * 文案经 i18n 插值；音色面板折叠态影响初始 class 与图标方向。
  * SVG 精灵拼接在模板最前（与拆分前的 innerHTML 完全一致）。
  */

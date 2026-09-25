@@ -1,7 +1,7 @@
 /**
  * widget 创建冒烟测试：Shadow DOM 挂载、结构完整性、幂等与初始化钩子。
  *
- * 覆盖 docs/tech-debt.md TD-001 拆分后的装配链路（icons + template + styles + 挂载）。
+ * 覆盖 widget 拆分后的装配链路（icons + template + styles + 挂载）。
  * widget 依赖 chrome.runtime / chrome.storage，用最小桩提供「未配置」响应，
  * i18n 回退为键名，足以做结构断言。
  */

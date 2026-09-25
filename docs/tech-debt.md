@@ -6,31 +6,33 @@ WebReader 的已知缺陷、临时方案与待清理项。每条写明**原因 /
 本仓库无独立 issue tracker，引用时用条目 ID（commit message / 分支名可带 `TD-00x`）。
 **登记不是许可**：清理由此表排队，改动到相关文件时优先顺手处理。
 
-## 汇总
+## 当前状态
 
-原 TD-001…TD-009 已全部解决（含复核时新发现并一并清理的 TD-010）。
-**截至当前版本，全仓库 130 个 `ts` / `css` 源文件已全部 ≤ 500 行，原则 2 清零。**
-TD-011 是音色状态机修复时发现的 popup 层同源缺陷，未修（见下）。
+**无未解决的技术债务。** 历史登记如下，均已解决或关闭；各条的解决记录
+（方案 / 保真 / 影响 / 验证）已随清理归档进提交历史，不再在此堆积：
 
-| ID | 主题 | 原登记行数 | 实测行数 | 拆分后 | 解决提交 |
-| --- | --- | --- | --- | --- | --- |
-| TD-001 | `content/widget.ts` 超限 | 1750 | **2020** | `widget/` 8 文件，最大 421 | `a93c6f6` + `52a61de` |
-| TD-002 | `shared/language-names.ts` 超限 | 1629 | 1629 | `language-names/` 21 文件，最大 212 | `ee59693` |
-| TD-003 | `shared/detect-language.ts` 超限 | 871 | 871 | 已删除（ADR 0002 取消自动检测后零引用） | `94bd687` 拆分 / 本次删除 |
-| TD-004 | `content/player.ts` 超限 | 789 | **905** | `player/` 8 文件，最大 208 | `4ce867b` |
-| TD-005 | `public/popup.css` 超限 | 699 | **820** | 7 个 `.css`，最大 324 | `764c77d` |
-| TD-006 | `content/index.ts` 超限 | 699 | **829** | `index.ts` 148 + `widget-init/` 8 文件（最大 159）+ `background-messages.ts` + `page-listeners.ts` | `67b3e1a` |
-| TD-007 | `content/extractor.ts` 超限 | 583 | 583 | `extractor/` 8 文件，最大 142 | `0ee0dd0` |
-| TD-008 | `content/ui.ts` 超限 | 503 | 503 | `ui/` 7 文件，最大 316 | `6e7ca42` |
-| TD-009 | `PresetVoice.gender` 注释过时 | — | — | 注释修正 | `1f6ed71` |
-| TD-010 | `content/voices.ts` 超限（漏登） | — | 560 | `voices/` 4 文件，最大 353 | `35cb101` |
-| TD-011 | popup 层音色状态机同源缺陷 | — | — | 已随 ADR 0002 关闭（互斥状态机删除） | 本次 |
-| TD-012 | 旧版自动检测残留 selectedVoice 顶替界面语言默认 | — | — | 新增 voiceSelectionIsManual 持久化标志 + shared/voice-restore 判据 | 本次 |
+| ID | 主题 | 结局 |
+| --- | --- | --- |
+| TD-001 | `content/widget.ts` 超限（2020 行） | 拆为 `widget/`，最大 421 行 |
+| TD-002 | `shared/language-names.ts` 超限（1629 行） | 拆为 `language-names/`，最大 212 行 |
+| TD-003 | `shared/detect-language.ts` 超限（871 行） | [ADR 0002](adr/0002-voice-default-from-interface-language.md) 取消自动检测后零引用，整体删除 |
+| TD-004 | `content/player.ts` 超限（905 行） | 拆为 `player/`，最大 208 行 |
+| TD-005 | `public/popup.css` 超限（820 行） | 拆为 7 个 `popup-*.css`，最大 324 行 |
+| TD-006 | `content/index.ts` 超限（829 行） | 拆为 `widget-init/` 等，`index.ts` 降至 148 行 |
+| TD-007 | `content/extractor.ts` 超限（583 行） | 拆为 `extractor/`，最大 142 行 |
+| TD-008 | `content/ui.ts` 超限（503 行） | 拆为 `ui/`，最大 316 行 |
+| TD-009 | `PresetVoice.gender` 注释过时 | 注释已修正 |
+| TD-010 | `content/voices.ts` 超限（560 行） | 拆为 `voices/`，最大 353 行 |
+| TD-011 | popup 音色状态机同源缺陷 | [ADR 0002](adr/0002-voice-default-from-interface-language.md) 取消自动检测后互斥状态机删除，关闭 |
+| TD-012 | 旧版残留音色顶替界面语言默认 | 新增 `voiceSelectionIsManual` 标志修复，旧数据一次性自愈迁移 |
 
-> 「原登记行数」来自本表旧版本；**实测行数**用正确方法重新统计（见下节），
-> 多数条目被低估。此后登记行数一律以实测为准。
+拆分用提取脚本逐字节回比 + 函数级回比保真；**当前全仓库 130 个 `ts` / `css`
+源文件均 ≤ 500 行**（原则 2 清零）。
 
-### 行数统计方法修正（重要）
+新发现的债务续登于下，ID 自 **TD-013** 顺延，格式沿用「原因 / 影响范围 /
+潜在风险 / 移除条件」。
+
+## 行数统计方法修正（重要）
 
 原登记表与 `AGENTS.md` 的行数普遍偏小，原因是**统计方法错误**：
 PowerShell `Get-Content | Measure-Object -Line` 会少算（如 `widget.ts` 报 1750，
@@ -41,141 +43,6 @@ require('fs').readFileSync(path, 'utf8').split('\n').length;
 ```
 
 或 `wc -l`（Linux）。已同步修正 `AGENTS.md` §7 与 `RULES.md` 的行数引用。
-
----
-
-## 解决记录
-
-每项拆分均满足原移除条件：**每个文件 ≤ 500 行**、`npm run verify` 通过、
-对外 import 路径与导出形状不变、相关 `test/*.mjs` 冒烟通过。界面层的浏览器
-手动回归（`AGENTS.md` §3）见各提交说明，由改动人执行。
-
-### 通用保真手段
-
-纯数据 / 模板类拆分（TD-001、TD-002、TD-005）用**提取脚本 + 逐字节回比**：
-脚本切出原文片段并断言不含反引号 / `${` / 反斜杠，拆分后重新拼回并与原文
-（`git show HEAD:<path>`）逐字符比较，级联顺序与数据内容零漂移。
-
-逻辑类拆分（TD-003、TD-004、TD-006…TD-008、TD-010）用**函数级回比**：
-抽取旧文件每个函数的完整文本，去注释 / 空白 / `export` 后与新文件逐字比较
-（TD-004 的 19 个函数中 15 个逐字一致，其余 4 个仅注释位置不同）。
-
-### TD-001 — `content/widget.ts`（实测 2020 行）
-
-- **方案**：按「资源与装配分离」拆为 `widget/icons.ts`（SVG 精灵）、
-  `widget/template.ts`（HTML 结构模板，i18n 插值 + 音色面板折叠态）、
-  `widget/styles*.ts`（CSS：base / panel / controls / theme 四段 + 顺序聚合器）、
-  `widget/index.ts`（创建与 Shadow DOM 挂载）。`styles.ts` 起初拆成单文件
-  仍有 1435 行，二次提交按分区注释再拆为四段。
-- **保真**：`WIDGET_ICON_SPRITES + HTML 段` 与四段 CSS 拼接，在源码层与运行时层
-  均与旧 `innerHTML` / `style.textContent` 逐字节相同（33303 字符 CSS）。
-- **新增测试**：`test/widget.smoke.mjs`（15 例），填补 `createWidget` 此前完全没有
-  自动化覆盖的空白。
-
-### TD-002 — `shared/language-names.ts`（1629 行）
-
-- **方案**：按表拆为 `language-names/`（`language-names-en` / `country-names-en` /
-  `gender-translations` + 17 个按语言文件 + `index.ts` 聚合 5 个公共导出）。
-- **保真**：39 张表与旧文件逐键 0 差异。
-
-### TD-003 — `shared/detect-language.ts`（871 行）—— 已随 ADR 0002 整体删除
-
-- **原方案**：先补 `test/detect-language.behavior.mjs`（36 例）锁定既有行为，
-  再拆为 `detect-language/`（`index` 检测编排 + 平局规则、`script-fallback`、
-  `scoring` + 4 个词表）。
-- **保真**：21 个词表 0 差异，36/36 行为用例保持通过。
-- **注意**：部分样本按当前算法分类「不正确」（fr→it-IT、pt→vi-VN、ro→vi-VN、
-  bg→ru-RU、nb→da-DK），属**既有行为**，测试以快照方式锁定，不得借重构「修正」。
-- **关闭（2026-09-26）**：ADR 0002 取消正文语言自动检测后，本模块零引用，
-  7 个文件、`test/detect-language.behavior.mjs` 与拆分记录一并删除。拆分时的
-  「保真」要求随之失效。若未来重新引入检测，应基于新需求重建，不复用历史实现。
-
-### TD-004 — `content/player.ts`（实测 905 行）
-
-- **方案**：按职责拆为 `player/`（`playback` / `chunk`（MiMo + 本地容灾）/
-  `navigation` / `entire-page` / `stop-clear` / `paste` / `scroll` / `index` 聚合）。
-- **唯一状态迁移**：模块级 `localFallbackActive` 移入 `state.localFallbackActive`
-  （与 `isCancelled` 等会话级标志同列），消除跨子模块共享可变状态；其余逻辑零改动。
-- **保真**：19 个函数全部一致（见上节）。
-- **测试修复**：`play-entire-page.smoke.mjs` 桩补齐 `createLogger` / `debounce` /
-  `limitFloat` / `persistSettings` / `readSettings` / `TOGGLE_SETTINGS` / `localTts.*`
-  与子目录深一层的路径正则，恢复 4/4。
-
-### TD-005 — `public/popup.css`（实测 820 行）
-
-- **方案**：按界面分区拆为 7 个 `popup-*.css`，由 `popup.html` 顺序 `<link>` 引用
-  （不改构建，`public/` 原样复制）。
-- **保真**：拼接后规则与旧文件逐字节一致（15480 字符）。
-
-### TD-006 — `content/index.ts`（实测 829 行）
-
-- **方案**：初始化步骤按域拆为 `widget-init/`（dom-refs / auth-screen / audio-player /
-  theme / global-bridge / voice-search / language-select / controls），
-  background 消息监听 → `background-messages.ts`，网页点击跳转与划词监听 →
-  `page-listeners.ts`；`index.ts` 只保留模块级注册与初始化编排顺序（148 行）。
-
-### TD-007 — `content/extractor.ts`（583 行）
-
-- **方案**：拆为 `extractor/`（selectors / site-rules / skip-patterns /
-  pattern-match / block-detection / addressable-text / traversal / index 编排 + 再导出）。
-- **保真**：`extractor.smoke.mjs` 20/20。
-
-### TD-008 — `content/ui.ts`（503 行）
-
-- **方案**：拆为 `ui/`（screens / drag / time-progress / text-highlight /
-  controls / tooltips / index 再导出 23 个公共符号）。
-
-### TD-009 — `PresetVoice.gender` 注释过时
-
-- **修正**：`shared/types.ts` 注释改为说明该字段由 relay 音色的后端 `Gender` 填充，
-  供两层 voices 模块展示与搜索；MiMo 预置音色不填。
-
-### TD-010 — `content/voices.ts`（漏登，实测 560 行）
-
-- **发现**：原登记表因行数统计方法缺陷漏登（旧方法报 <500）。
-- **方案**：拆为 `voices/`（`format` 显示格式化纯函数 / `loader` 缓存 + 拉取 + 重试 /
-  `dropdown` 过滤 / 渲染 / 选择 / `index` 聚合），依赖方向无环：
-  `format ← dropdown ← loader`。
-- **保真**：11 个函数（含 3 个私有）全部一致。
-
-### TD-011 — popup 层音色状态机与 content 层同源缺陷 —— 已随 ADR 0002 关闭
-
-- **现象（历史）**：popup 层把「自动检测」与「已选音色」做成交斥：
-  `popup/index.ts`（autoDetect 开启 → `selectedVoice = null`）与
-  `popup/voices.ts`（加载后 autoDetect 开启 → `selectedVoice = null`），以及
-  清除按钮置空后 autoDetect 仍关闭的不自洽态。
-- **关闭（2026-09-26）**：ADR 0002 取消自动检测后，「自动检测 / 手选」的互斥
-  关系不复存在。popup 选音色路径已按同一设计重写为「手选优先（持久化）+
-  否则按界面语言派生」，互斥分支全部删除，popup 浏览器手动回归完成。
-
-### TD-012 — 旧版自动检测残留 `selectedVoice` 顶替界面语言默认音色
-
-- **现象**：从旧版（带正文语言自动检测）升级的用户，插件界面为中文时默认音色却是
-  英文（如「英语 - Mia」）。
-- **原因**：旧版 `resolveVoiceForText` 把**检测出的**音色写入 `state.selectedVoice`，
-  `saveSettings` 直接落盘 name（`state.selectedVoice ? state.selectedVoice.name : null`），
-  没有区分「用户手选」与「自动检测」。ADR 0002 重写为「手选优先 + 界面语言派生」后，
-  恢复链路（`content/voices/loader.restoreVoiceSelection` / `popup/voices.loadVoices`）
-  只要存储有 name 就当手选恢复并置 `voiceSelectionIsManual = true`，于是旧版残留的英文
-  音色顶替了按界面语言派生的中文默认；被误标手选后 `saveSettings` 又把它以手选身份写回，
-  旧数据永远清不掉（自延续）。
-- **修复**：新增持久化标志 `ExtensionSettings.voiceSelectionIsManual`，
-  `saveSettings`（两层）显式写入（手选 → `true` 并落盘 name；派生 → `false` 且 name 为 null）；
-  恢复判据抽为共享纯函数 `shared/voice-restore.resolveRestoredVoice`：只有标志显式为 `true`
-  **且**音色仍在当前目录内才沿用，否则一律重新派生。旧数据缺标志 → 按界面语言重新派生，
-  下次保存即以正确标志覆写，**一次性自愈迁移，无兼容层**（原则 10）。
-- **影响范围**：`shared/types.ts` / `shared/settings.ts`（新增存储键）/
-  `content/settings.ts` / `popup/settings.ts`（落盘）/
-  `content/voices/loader.ts` / `popup/voices.ts`（恢复判据）。
-- **验证**：`test/voice-restore.smoke.mjs`（7 例，判据矩阵）+
-  端到端复现（中文界面 + 残留 `Mia` → `中文 - MiMo-默认`）；真手选 `茉莉` 正确保留。
-  `npm run verify` 通过，全部冒烟测试绿灯。
-- **回退风险**：低。判据只新增一个布尔键，缺键时行为等同于「重新派生」，
-  与 ADR 0002 的默认语义一致。
-- **移除条件**：无需移除——标志是 ADR 0002 状态机的必要组成部分，
-  非临时兼容层。旧数据在用户首次保存后即被覆写。
-
----
 
 ## 拆分后仍须遵守的隐性契约（改动这些模块前必读）
 
@@ -193,7 +60,7 @@ require('fs').readFileSync(path, 'utf8').split('\n').length;
 - **`sentence-map` / `reading-overlay` 的括号处理**：句子 span 覆盖「合并区间」，
   被剔除的括号内容仍在 span 内（随句高亮但不朗读）——不要用 `map.sentences` 长度
   断言 span 长度（见 `test/inline-reading.smoke.mjs` 的幂等用例）。
-- **`detect-language` 已删除**（ADR 0002）：本条与 TD-003 一并关闭，不再约束。
+- **`detect-language` 已删除**（ADR 0002）：不再约束，本仓库无语言检测模块。
 - **`state.selectedVoice` 是「当前要使用的音色」的单一来源**（两层同构）：音色列表
   加载完成后不为 null。`voiceSelectionIsManual` 只决定它由谁产生——`true` 为
   用户手选（按 name 持久化，界面语言切换不覆盖）；`false` 时由

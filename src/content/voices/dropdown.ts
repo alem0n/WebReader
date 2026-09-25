@@ -1,7 +1,7 @@
 /**
  * 音色下拉的过滤 / 渲染 / 选择。
  *
- * 从 voices.ts 拆出（docs/tech-debt.md TD-010）：下拉 UI 的过滤排序、选项渲染、
+ * 从 voices.ts 拆出：下拉 UI 的过滤排序、选项渲染、
  * 点击选中与高亮跟随。音色的显示文本统一由 ./format 生成，选择后写回存储。
  */
 import { state } from '../state';
