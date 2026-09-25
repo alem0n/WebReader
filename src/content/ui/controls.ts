@@ -1,205 +1,19 @@
-/** ui (migrated from content.js) */
-import { applyParentheticalFilter } from './utils';
-import { SentencePlayer } from '../shared/sentence-player';
-import { getWidget, getWidgetElementById } from './widget';
-import { state } from './state';
-import { i18n } from './i18n';
-import { saveSettings } from './settings';
-import { TOGGLE_SETTINGS, type ToggleKey } from '../shared/toggle-settings';
-import { createContentLogger } from './log';
-
-const logger = createContentLogger('ui');
-
-export function showPlayerScreenInWidget() {
-  if (state.authContainer) state.authContainer.style.display = 'none';
-  if (state.playerContainer) state.playerContainer.style.display = 'block';
-  if (state.apiKeyContainer) state.apiKeyContainer.style.display = 'none';
-  if (state.authCheckInterval) {
-    clearInterval(state.authCheckInterval);
-    state.authCheckInterval = null;
-  }
-  getWidget()?.classList.remove('auth-mode');
-}
-
-export function showApiKeyScreenInWidget() {
-  if (state.playerContainer) state.playerContainer.style.display = 'none';
-  if (state.apiKeyContainer) state.apiKeyContainer.style.display = 'block';
-  getWidget()?.classList.add('auth-mode');
-}
-
-export async function checkApiKeyStatusForWidget() {
-  try {
-    const result = await new Promise((resolve) => {
-      chrome.runtime.sendMessage({ action: 'checkApiKeyStatus' }, (response) => {
-        if (chrome.runtime.lastError) {
-          resolve(null);
-          return;
-        }
-        resolve(response);
-      });
-    });
-    return result || { hasKey: false };
-  } catch (error) {
-    logger.error('Failed to check API key status:', error);
-    return { hasKey: false };
-  }
-}
-
-export function setupApiKeyUIInWidget() {
-  // 配置统一在插件主界面完成，悬浮窗内无需绑定保存逻辑
-}
-
-export function dragStart(e: any) {
-  // Don't drag if clicking on interactive elements
-  if (
-    (e.target as any).closest('button') ||
-    (e.target as any).closest('input') ||
-    (e.target as any).closest('select') ||
-    (e.target as any).closest('label') ||
-    (e.target as any).closest('.dropdown-list') ||
-    (e.target as any).closest('.voice-option') ||
-    (e.target as any).closest('.btn') ||
-    (e.target as any).closest('.text-content') ||
-    (e.target as any).closest('.user-menu')
-  ) {
-    return;
-  }
-
-  state.initialX = e.clientX - state.xOffset;
-  state.initialY = e.clientY - state.yOffset;
-  state.isDragging = true;
-  getWidget()?.classList.add('dragging');
-}
-
-export function drag(e: any) {
-  if (state.isDragging) {
-    e.preventDefault();
-    state.currentX = e.clientX - state.initialX;
-    state.currentY = e.clientY - state.initialY;
-
-    state.xOffset = state.currentX;
-    state.yOffset = state.currentY;
-
-    setTranslate(state.currentX, state.currentY, getWidget());
-  }
-}
-
-export function dragEnd(_e: any) {
-  state.initialX = state.currentX;
-  state.initialY = state.currentY;
-  state.isDragging = false;
-  getWidget()?.classList.remove('dragging');
-}
-
-function setTranslate(xPos: any, yPos: any, el: any) {
-  // Preserve scale if minimized
-  const currentTransform = el.style.transform || '';
-  const scaleMatch = currentTransform.match(/scale\([^)]+\)/);
-  const scale = scaleMatch ? ' ' + scaleMatch[0] : '';
-  el.style.transform = `translate(${xPos}px, ${yPos}px)${scale}`;
-}
-
-function formatTime(seconds: any) {
-  if (!seconds || isNaN(seconds) || !isFinite(seconds)) {
-    return '0:00';
-  }
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
-
-export function estimateTotalDuration(text: string, speed: number) {
-  const words = text.split(/\s+/).length;
-  const baseWPM = 150; // words per minute
-  const minutes = words / baseWPM;
-  return (minutes * 60) / speed; // seconds
-}
-
-export function updateTimeProgress(currentTime: any, _duration: any) {
-  const timeProgressEl = getWidgetElementById('time-progress') as any;
-  if (!timeProgressEl) return;
-
-  if (state.sentencePlayer && state.sentencePlayer.isPlaying) {
-    // Calculate total elapsed time (previous chunks + current position)
-    const totalCurrentTime = state.totalElapsedTime + currentTime;
-
-    // Estimate total duration for all sentences
-    const allText = state.sentencePlayer.sentences.join(' ');
-    const totalDuration = estimateTotalDuration(allText, state.playbackSpeed);
-
-    const currentFormatted = formatTime(totalCurrentTime);
-    const durationFormatted = formatTime(totalDuration);
-    timeProgressEl.textContent = `${currentFormatted} / ${durationFormatted}`;
-    timeProgressEl.classList.remove('hidden');
-  } else {
-    timeProgressEl.classList.add('hidden');
-  }
-}
-
 /**
- * 构建带高亮句与段落分隔的展示 HTML（段落分隔语义同 SentencePlayer.getDisplaySeparatorAfter）。
+ * 由播放 / 加载状态驱动的界面控件更新：按钮与开关的启用禁用、状态文本、
+ * 错误提示、音色面板折叠。
  *
- * 抽出公共函数供首句高亮与播放中高亮共用，保证两处渲染逐句一致。
+ * 网页内跟读开关与既有开关同步禁用/启用：播放/加载期间禁止变更，防止中途切换
+ * 导致页面残留高亮 span 或结构未还原（AGENTS.md 硬约束）。
  */
-function buildHighlightHtml(sentences: string[], paragraphBreakAfterIndex: Set<number>, highlightIndex: number): string {
-  let html = '';
-  for (let i = 0; i < sentences.length; i++) {
-    if (i === highlightIndex) {
-      html += `<span class="highlight">${escapeHtml(sentences[i])}</span>`;
-    } else {
-      html += escapeHtml(sentences[i]);
-    }
-    if (i < sentences.length - 1) {
-      html += paragraphBreakAfterIndex.has(i) ? '\n\n' : ' ';
-    }
-  }
-  return html;
-}
+import { getWidgetElementById } from '../widget';
+import { state } from '../state';
+import { i18n } from '../i18n';
+import { saveSettings } from '../settings';
+import { TOGGLE_SETTINGS, type ToggleKey } from '../../shared/toggle-settings';
+import { createContentLogger } from '../log';
+import { setupDisabledTooltips } from './tooltips';
 
-export function highlightFirstSentenceIfNeeded() {
-  if (!state.textContent) return;
-
-  // 整页规范路径：直接用规范句子表高亮首句，与实际播放逐句一致（不二次切分）
-  const map = state.pageTextMap;
-  if (map && map.sentences.length > 0) {
-    state.textContent.innerHTML = buildHighlightHtml(map.sentences, map.paragraphBreakAfterIndex, 0);
-    logger.debug('First sentence highlighted (canonical map)');
-    return;
-  }
-
-  // 旧路径：从文本框现切（选中朗读 / 粘贴 等无 DOM 映射场景）
-  const text = applyParentheticalFilter((state.textContent.textContent || state.textContent.innerText || '').trim());
-
-  // Only highlight if there's text and no playback is active
-  if (text && state.sentencePlayer && (!state.sentencePlayer.isPlaying || state.sentencePlayer.isPaused)) {
-    // Split text into sentences (paragraph breaks preserved in tempPlayer)
-    const tempPlayer = new SentencePlayer();
-    tempPlayer.setText(text);
-
-    if (tempPlayer.sentences.length > 0) {
-      state.textContent.innerHTML = buildHighlightHtml(tempPlayer.sentences, tempPlayer.paragraphBreakAfterIndex, 0);
-      logger.debug('First sentence highlighted');
-    }
-  }
-}
-
-export function updateTextHighlight(sentenceIndex: number) {
-  if (!state.sentencePlayer || !state.textContent) return;
-
-  const sentences = state.sentencePlayer.sentences;
-  if (sentences.length === 0) return;
-
-  state.textContent.innerHTML = buildHighlightHtml(sentences, state.sentencePlayer.paragraphBreakAfterIndex, sentenceIndex);
-
-  // Note: Auto-scroll is now only done when a new chunk starts (in playSentenceChunk)
-  // This allows users to manually scroll without interruption during playback
-}
-
-export function escapeHtml(text: string) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
+const logger = createContentLogger('ui/controls');
 
 /**
  * 网页内跟读显示的两个开关与既有开关同步禁用/启用。
@@ -227,7 +41,7 @@ export function updateButtonStates() {
     (state.prevBtn as any).disabled = true;
     (state.nextBtn as any).disabled = true;
     (state.clearBtn as any).disabled = false; // Always enabled
-    if (typeof updateClearButton === 'function') updateClearButton();
+    updateClearButton();
     updateStatusText(i18n('loading_voices'), 'loading_voices');
     return;
   }
@@ -244,7 +58,7 @@ export function updateButtonStates() {
     (state.voiceSearchInput as any).disabled = true;
     (state.speedSelect as any).disabled = true;
     setInlineCheckboxesDisabled(true);
-    if (typeof updateClearButton === 'function') updateClearButton();
+    updateClearButton();
 
     updateStatusText(i18n('loading_audio'), 'loading_audio');
     return;
@@ -329,91 +143,10 @@ export function updateButtonStates() {
   (state.voiceSearchInput as any).disabled = isActivePlayback;
   (state.speedSelect as any).disabled = isActivePlayback;
   setInlineCheckboxesDisabled(!!isActivePlayback);
-  if (typeof updateClearButton === 'function') updateClearButton();
+  updateClearButton();
 
   // Setup tooltips for disabled elements and voice search
   setupDisabledTooltips();
-}
-
-export function setupDisabledTooltips() {
-  // Remove old handlers
-  state.tooltipHandlers.forEach(({ element, enter, leave }) => {
-    element.removeEventListener('mouseenter', enter);
-    element.removeEventListener('mouseleave', leave);
-  });
-  state.tooltipHandlers = [];
-
-  // Tooltip for voice search
-  state.voiceSearchInput = getWidgetElementById('voice-search') as any;
-  if (state.voiceSearchInput && (state.voiceSearchInput as any).disabled) {
-    const dropdownContainer = state.voiceSearchInput.closest('.dropdown-container');
-    const targetElement = dropdownContainer || state.voiceSearchInput;
-    const showHandler = (e: any) => showTooltip(e, targetElement);
-    const hideHandler = hideTooltip;
-    targetElement.addEventListener('mouseenter', showHandler);
-    targetElement.addEventListener('mouseleave', hideHandler);
-    state.tooltipHandlers.push({ element: targetElement as HTMLElement, enter: showHandler, leave: hideHandler });
-  }
-
-  // Tooltip for speed select
-  state.speedSelect = getWidgetElementById('speed-select') as any;
-  if (state.speedSelect && (state.speedSelect as any).disabled) {
-    const showHandler = (e: any) => showTooltip(e, state.speedSelect);
-    const hideHandler = hideTooltip;
-    state.speedSelect.addEventListener('mouseenter', showHandler);
-    state.speedSelect.addEventListener('mouseleave', hideHandler);
-    state.tooltipHandlers.push({ element: state.speedSelect, enter: showHandler, leave: hideHandler });
-  }
-
-  // Tooltip for checkboxes（开关数据驱动渲染后统一在 toggleCheckboxes 中；渲染前调用则空表跳过）
-  for (const cb of Object.values(state.toggleCheckboxes)) {
-    if (!(cb as any).disabled) continue;
-    const checkboxLabel = cb.closest('.checkbox-label');
-    if (!checkboxLabel) continue;
-    const showHandler = (e: any) => showTooltip(e, checkboxLabel);
-    const hideHandler = hideTooltip;
-    checkboxLabel.addEventListener('mouseenter', showHandler);
-    checkboxLabel.addEventListener('mouseleave', hideHandler);
-    state.tooltipHandlers.push({ element: checkboxLabel as HTMLElement, enter: showHandler, leave: hideHandler });
-  }
-}
-
-function showTooltip(_e: any, element: any, customText: any = null) {
-  if (state.currentTooltip) {
-    hideTooltip();
-  }
-
-  if (!element) return;
-
-  const tooltip = document.createElement('div');
-  tooltip.className = 'tts-tooltip';
-  tooltip.textContent = customText || i18n('click_stop_to_enable');
-  const root = window.ttsWidgetShadowRoot || document.body;
-  root.appendChild(tooltip);
-
-  const rect = element.getBoundingClientRect();
-  tooltip.style.left = rect.left + rect.width / 2 - tooltip.offsetWidth / 2 + 'px';
-  tooltip.style.top = rect.top - tooltip.offsetHeight - 8 + 'px';
-
-  // Adjust if tooltip goes off screen
-  setTimeout(() => {
-    if (parseInt(tooltip.style.left) < 10) {
-      tooltip.style.left = rect.left + 'px';
-    }
-    if (parseInt(tooltip.style.left) + tooltip.offsetWidth > window.innerWidth - 10) {
-      tooltip.style.left = rect.right - tooltip.offsetWidth + 'px';
-    }
-    tooltip.classList.add('show');
-  }, 10);
-
-  state.currentTooltip = { element, tooltip };
-}
-
-function hideTooltip() {
-  if (state.currentTooltip && (state.currentTooltip as any).tooltip) {
-    (state.currentTooltip as any).tooltip.remove();
-    state.currentTooltip = null;
-  }
 }
 
 export function updatePlayButtonState() {
@@ -483,7 +216,7 @@ export function disableButtons(disable: any) {
     (state.voiceSearchInput as any).disabled = true;
     (state.speedSelect as any).disabled = true;
     setInlineCheckboxesDisabled(true);
-    if (typeof updateClearButton === 'function') updateClearButton();
+    updateClearButton();
   } else {
     // Re-enable inputs (textContent is always enabled as it's read-only)
 
@@ -538,7 +271,7 @@ export function resetPlayerState() {
   (state.voiceSearchInput as any).disabled = false;
   (state.speedSelect as any).disabled = false;
   setInlineCheckboxesDisabled(false);
-  if (typeof updateClearButton === 'function') updateClearButton();
+  updateClearButton();
 
   // Reset time progress
   const timeProgressEl = getWidgetElementById('time-progress') as any;

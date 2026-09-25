@@ -40,6 +40,9 @@ interface ContentState {
   isLoading: boolean;
   isCollectPageLoading: boolean;
   isCancelled: boolean;
+  /** 本地音色容灾会话级标志：MiMo 合成失败后置 true，本次播放改用 speechSynthesis；
+   * 新建播放 / 停止 / 清空时重置（原 player 模块级状态，拆分后收敛到此处） */
+  localFallbackActive: boolean;
   currentChunkInfo: ChunkInfo | null;
   autoDetectLanguage: boolean;
   removeParentheticals: boolean;
@@ -137,6 +140,7 @@ export const state: ContentState = {
   isLoading: false,
   isCollectPageLoading: false,
   isCancelled: false,
+  localFallbackActive: false,
   currentChunkInfo: null,
   autoDetectLanguage: true,
   removeParentheticals: true,

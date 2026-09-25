@@ -43,6 +43,15 @@ function setGlobals(dom) {
 }
 
 const tick = () => new Promise((r) => setTimeout(r, 120));
+// 内容探测走 requestIdleCallback（jsdom 退化为 ~3s 的 setTimeout），需轮询等待
+const waitFor = async (fn, timeoutMs = 4500) => {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    await tick();
+    if (fn()) return true;
+  }
+  return false;
+};
 
 // ---------------------------------------------------------------------------
 // 用例 1：有正文的页面 → 按钮出现
@@ -54,7 +63,7 @@ const dom1 = new JSDOM(
 setGlobals(dom1);
 const mod1 = await bundleTo(resolve(__dirname, '.fab1.bundle.mjs'));
 mod1.initPageFab();
-await tick();
+await waitFor(() => !!document.querySelector('#tts-read-page-fab-host'), 4500);
 
 console.log('\n[page-fab]');
 test('有正文的页面：右下角悬浮按钮出现', () => {
@@ -81,13 +90,17 @@ test('宿主固定在右下角且不拦截页面事件', () => {
   assert.ok(cs.position === 'fixed', '期望 position:fixed');
   assert.ok(cs.pointerEvents === 'none', '宿主 pointer-events:none，不挡页面交互');
 });
-test('按钮以右下角对齐宿主，不会向右溢出视口', () => {
-  // 宿主是 0x0 锚点：按钮必须绝对定位并右下对齐，
-  // 否则会以宿主左边缘为起点向右溢出，被挤出视口外（历史回归）
-  const style = document.querySelector('#tts-read-page-fab-host').shadowRoot.querySelector('style').textContent;
+test('按钮绝对定位且位于视口内，不会向右溢出视口', () => {
+  // 宿主是 0x0 锚点：按钮绝对定位 + inline left/top（可拖动），
+  // 坐标经 clampPos 钳制在视口内，否则会以宿主左边缘为起点向右溢出（历史回归）
+  const host = document.querySelector('#tts-read-page-fab-host');
+  const style = host.shadowRoot.querySelector('style').textContent;
+  const button = host.shadowRoot.querySelector('button');
   assert.ok(/position:\s*absolute/.test(style), '按钮应为绝对定位');
-  assert.ok(/right:\s*0/.test(style), '按钮右边缘对齐宿主');
-  assert.ok(/bottom:\s*0/.test(style), '按钮下边缘对齐宿主');
+  const left = parseFloat(button.style.left);
+  const top = parseFloat(button.style.top);
+  assert.ok(!Number.isNaN(left) && left >= 0 && left + 46 <= window.innerWidth, '按钮水平坐标应在视口内');
+  assert.ok(!Number.isNaN(top) && top >= 0 && top + 46 <= window.innerHeight, '按钮垂直坐标应在视口内');
 });
 
 // ---------------------------------------------------------------------------

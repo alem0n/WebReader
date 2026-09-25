@@ -54,7 +54,7 @@ let playing = false;
 
 const bundle = resolve(__dirname, '.pep.bundle.mjs');
 await esbuild.build({
-  entryPoints: [resolve(__dirname, '../src/content/player.ts')],
+  entryPoints: [resolve(__dirname, '../src/content/player/index.ts')],
   bundle: true,
   format: 'esm',
   platform: 'browser',
@@ -67,14 +67,15 @@ await esbuild.build({
     {
       name: 'stub',
       setup(build) {
-        build.onResolve({ filter: /^\.\/state$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
-        build.onResolve({ filter: /^\.\/widget$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
-        build.onResolve({ filter: /^\.\/ui$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
-        build.onResolve({ filter: /^\.\/i18n$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
-        build.onResolve({ filter: /^\.\/text-input$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
-        build.onResolve({ filter: /^\.\/voices$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
-        build.onResolve({ filter: /^\.\/utils$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
-        build.onResolve({ filter: /^\.\.\/shared/ }, (args) => ({ path: args.path, namespace: 'stub' }));
+        build.onResolve({ filter: /^\.\.?\/state$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
+        build.onResolve({ filter: /^\.\.?\/widget$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
+        build.onResolve({ filter: /^\.\.?\/ui$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
+        build.onResolve({ filter: /^\.\.?\/i18n$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
+        build.onResolve({ filter: /^\.\.?\/text-input$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
+        build.onResolve({ filter: /^\.\.?\/voices$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
+        build.onResolve({ filter: /^\.\.?\/utils$/ }, (args) => ({ path: args.path, namespace: 'stub' }));
+        // player 子目录深一层：共享模块路径为 ../../shared/*
+        build.onResolve({ filter: /^(\.\.\/)+shared/ }, (args) => ({ path: args.path, namespace: 'stub' }));
         build.onLoad({ filter: /.*/, namespace: 'stub' }, () => ({
           loader: 'js',
           contents: `
@@ -123,6 +124,19 @@ await esbuild.build({
             export function subtractCharRanges(start, end) { return [{ start, end }]; }
             export function mergeCharRanges(r) { return r; }
             export function detectLanguage() { return null; }
+            export function createLogger() { return { debug() {}, info() {}, warn() {}, error() {} }; }
+            export function debounce(fn) { return fn; }
+            export function limitFloat(n) { return n; }
+            export async function persistSettings() {}
+            export async function readSettings() { return {}; }
+            export const TOGGLE_SETTINGS = [];
+            // shared/local-tts 命名空间导入（player 以 * as localTts 调用）
+            export function cancel() {}
+            export function canSpeak() { return false; }
+            export function pause() {}
+            export function resume() {}
+            export function speak() { return true; }
+            export function normalizeLang(l) { return l; }
             export class AudioCacheManager { constructor() {} clear() {} }
             // sentence-map 复用的切分管线桩：返回单句数组即可（本测试只验控制流，不验切分）
             export class SentencePlayer {

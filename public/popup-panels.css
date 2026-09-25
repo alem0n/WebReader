@@ -1,0 +1,36 @@
+/* ============================================================
+   卡片面板（配置 / 音色）
+   （由 popup.css 按界面分区拆出；popup.html 按原顺序引用，层叠顺序不变）
+   ============================================================ */
+
+.panel {
+  background: var(--color-paper-white);
+  border: 2px solid var(--color-faded-gray);
+  border-radius: var(--radius);
+  padding: var(--card-padding);
+}
+
+.hint {
+  font-size: var(--text-caption);
+  line-height: 1.5;
+  color: var(--color-pencil-gray);
+}
+
+.field-label {
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-pencil-gray);
+}
+
+.link {
+  color: var(--color-spark-blue);
+  text-decoration: none;
+  font-size: var(--text-caption);
+  font-weight: 700;
+}
+
+.link:hover {
+  text-decoration: underline;
+}

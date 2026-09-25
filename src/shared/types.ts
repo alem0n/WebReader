@@ -11,7 +11,10 @@ export interface PresetVoice {
   voice: string;
   /** 语言代码，如 zh-CN / en-US */
   language: string;
-  /** 历史兼容字段（MiMo 预置音色不使用） */
+  /**
+   * 音色性别标注：MiMo 预置音色不填；relay 音色由后端 /v1/voices 的 Gender 填充，
+   * 供 content/voices.ts 与 popup/voices.ts 展示与搜索过滤
+   */
   gender?: string;
 }
 

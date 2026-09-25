@@ -54,7 +54,7 @@
 | 原则 | 本项目执行方式 | 详见 |
 | --- | --- | --- |
 | 1 架构与领域优先 | 动手前先核对 §1.1 设计决策与 `RULES.md` 的分层依赖方向（纯逻辑下沉 `shared/`，两层只留环境胶水）；不得为图快绕过分层铁律 | §1.1 / `RULES.md` |
-| 2 优雅模块 + 500 行上限 | 单文件 > 500 行为硬约束（含 `public/popup.css` 等纯资源文件）；接近 400 行主动规划拆分。现有 8 个超限文件已登记 `docs/tech-debt.md` | §6 / `docs/tech-debt.md` |
+| 2 优雅模块 + 500 行上限 | 单文件 > 500 行为硬约束（含 `public/popup-*.css` 等纯资源文件）；接近 400 行主动规划拆分。历史超限文件已全部拆分完成，见 `docs/tech-debt.md` | §6 / `docs/tech-debt.md` |
 | 3 模型边界不泄漏 | 四类模型到本项目的映射见下表；`shared/**` 只能是纯函数 / 纯类型 / 纯类，不持任何层 state | §0.2 / `RULES.md` |
 | 6 完整前端体验 | 浏览器手动回归清单必须覆盖加载 / 空状态 / 错误 / 重试 / 反馈 / 可访问性，不只是「 happy path 」 | §3 |
 | 7 复用 + 依赖核查 | 本仓库无 `packages/` workspace；新增依赖前先核查根 `package.json`（零运行时依赖、5 个 devDependency）与 `tts-relay/package.json` 能否满足，先查文档与类型定义再决定引入 | §3 / §6 |
@@ -91,7 +91,9 @@ src/
                  Web Audio 播放器
 tts-relay/      ★ 后端中转服务（Edge TTS，独立 npm 项目，可选自部署）
 test/           ★ jsdom 冒烟测试（node 手动运行）
-public/         静态资源（原样复制到 dist/）：manifest.json / popup.html / popup.css /
+public/         静态资源（原样复制到 dist/）：manifest.json / popup.html +
+                7 个 popup-*.css（base / header / panels / buttons / config-panel /
+                voice-panel / status，<link> 顺序即层叠顺序）/
                 _locales（en / zh_CN）/ icons
 esbuild.config.mjs  三入口构建（content / popup / background）+ public 复制
 ```
@@ -369,8 +371,10 @@ Refs: AGENTS.md §1.1
 
 **原则硬约束（§0，与上述平台约束并列执行）**：
 
-- **单文件 ≤ 500 行**（原则 2）：含 `.css` 等资源文件；接近 400 行主动规划拆分，
-  超限文件清单与拆分方向见 `docs/tech-debt.md`。
+- **单文件 ≤ 500 行**（原则 2）：含 `.css` 等资源文件；接近 400 行主动规划拆分。
+  历史超限项已全部拆分完成（见 `docs/tech-debt.md` 的解决记录），拆分后的
+  **隐性契约**（初始化顺序、styles 拼接即级联顺序、`collectPageUnits` 输出形状等）
+  亦见该表，改动这些模块前必读。
 - **四类模型不泄漏**（原则 3）：协议 / 领域 / 持久化 / 视图模型到本项目的映射见 §0.2；
   `shared/**` 不得 import 任何层模块、不得持有层 state；视图层不得绕过 `shared/settings` 直写 storage。
 - **依赖先核查再引入**（原则 7）：先查根 `package.json` 与 `tts-relay/package.json` 的已有依赖、
@@ -393,8 +397,9 @@ Refs: AGENTS.md §1.1
   共享逻辑一律下沉到 `shared/`（纯函数 / 类，不持有任何层 state）。
 - **Shadow DOM 内的 DOM 引用**用 `getWidgetElementById` / `getWidget().querySelector`，
   **不要**用 `document.getElementById`（会拿到页面的，不是悬浮窗的）。
-- **本地容灾是会话级**：`localFallbackActive` 在停止 / 清空 / 新建播放时重置，恢复网络或
-  填好 Key 后重新播放自动回到 MiMo；本地路径无播放句柄，暂停 / 恢复走 `speechSynthesis`。
+- **本地容灾是会话级**：`state.localFallbackActive` 在停止 / 清空 / 新建播放时重置，
+  恢复网络或填好 Key 后重新播放自动回到 MiMo；本地路径无播放句柄，
+  暂停 / 恢复走 `speechSynthesis`。
 - **逐句高亮的「规范路径」自检**：仅当文本框内容与 `getDisplayTextFromMap(map)` 完全一致
   时才走 DOM 回指高亮；用户手改 / 粘贴 / 选中朗读时自检不成立，自动降级为仅悬浮窗高亮。
 - **`_locales` 的 2 个语言文件（en / zh_CN）不要动**：i18n 键保持既有集合不变；新功能文案写死中文。
@@ -402,9 +407,11 @@ Refs: AGENTS.md §1.1
   缓存 / 播放都在 content / popup 侧；background 不持有可变全局状态，持久化写 `chrome.storage`。
 - **strictNullChecks 下的事件回调**：`e.target` 常需 `as HTMLElement`；
   `catch (e)` 的 `e` 是 `unknown`，属性访问需断言（`useUnknownInCatchVariables` 已开）。
-- **500 行硬约束有存量违规**：`widget.ts`（1750）/ `language-names.ts`（1629）/ `detect-language.ts`（871）/
-  `player.ts`（789）/ `popup.css`（699）/ `index.ts`（699）/ `extractor.ts`（583）/ `ui.ts`（503）超限，
-  已登记 `docs/tech-debt.md`（TD-001…TD-008）。改动这些文件时：本次改动若会继续加行，
-  把拆分放进同一分支；否则至少更新登记的当前行数。
+- **500 行硬约束已清零**：历史超限文件（`widget.ts` 2020 / `language-names.ts` 1629 /
+  `detect-language.ts` 871 / `player.ts` 905 / `popup.css` 820 / `index.ts` 829 /
+  `extractor.ts` 583 / `ui.ts` 503 / `voices.ts` 560）均已拆分为子目录，
+  全仓库 130 个 ts/css 源文件现在均 ≤ 500 行，详见 `docs/tech-debt.md`。
+  **统计行数必须用 node 的 `split('\n').length`**：PowerShell
+  `Measure-Object -Line` 会系统性少算（如 widget.ts 报 1750，实测 2020）。
 - **上下文进 ADR 与债务表，不要只留在聊天记录里**（原则 8）：关键架构决策写 `docs/adr/`；
   已知缺陷 / 临时方案 / 兼容约束写 `docs/tech-debt.md`（含原因 / 影响范围 / 潜在风险 / 移除条件）。

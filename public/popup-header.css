@@ -1,0 +1,101 @@
+/* ============================================================
+   顶部品牌区 + 导航胶囊
+   （由 popup.css 按界面分区拆出；popup.html 按原顺序引用，层叠顺序不变）
+   ============================================================ */
+
+.app-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-16);
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-12);
+}
+
+.app-brand-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius);
+  border: 2px solid var(--color-night-ink);
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.app-brand-name {
+  font-family: var(--font-feather);
+  font-weight: 700;
+  font-size: var(--text-heading-sm);
+  line-height: var(--leading-heading-sm);
+  letter-spacing: -0.02em;
+  color: var(--color-eager-green);
+}
+
+.app-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-8);
+}
+
+/* Nav Language Pill —— 透明底 + 2px 描边 + 大写小字 */
+.nav-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: var(--color-pencil-gray);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: var(--text-nav-label);
+  line-height: var(--leading-nav-label);
+  letter-spacing: var(--tracking-nav-label);
+  text-transform: uppercase;
+  border: 2px solid var(--color-faded-gray);
+  border-radius: var(--radius);
+  padding: 10px var(--spacing-16);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.nav-pill:hover {
+  border-color: var(--color-night-ink);
+  color: var(--color-night-ink);
+}
+
+.nav-pill:active {
+  transform: translateY(1px);
+}
+
+.nav-pill-icon {
+  flex-shrink: 0;
+}
+
+/* 引擎配置入口：蓝色强调（Outlined Account Button 语义） */
+.nav-pill--key {
+  color: var(--color-spark-blue);
+  border-color: var(--color-faded-gray);
+}
+
+.nav-pill--key:hover {
+  border-color: var(--color-spark-blue);
+  color: var(--color-spark-blue);
+}
+
+.widget-toggle-status {
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  color: var(--color-pencil-gray);
+}
+
+.widget-toggle-status.success {
+  color: var(--color-eager-green);
+  font-weight: 700;
+}
+
+.widget-toggle-status.error {
+  color: var(--color-night-ink);
+  font-weight: 700;
+}
