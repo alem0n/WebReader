@@ -21,7 +21,7 @@ import * as localTts from '../../shared/local-tts';
 import { createContentLogger } from '../log';
 import { refreshMapIfStale } from './entire-page';
 import { playSentenceChunk } from './chunk';
-import { resolveVoiceForText } from '../voices/voice-selection';
+import { ensureVoiceSelected } from '../voices/voice-selection';
 
 const logger = createContentLogger('player');
 
@@ -92,9 +92,9 @@ export async function handlePlayPause() {
   try {
     hideError();
 
-    // 自动检测开启时由此函数统一选音色（检测 + 脚本回退 + 无匹配音色回退），
-    // 点击跳转也走同一函数，两处语义一致
-    const voiceToUse = resolveVoiceForText(text);
+    // 音色单一来源守卫：手选优先，否则按界面语言派生默认音色。
+    // 点击跳转也复用同一来源，两处语义一致
+    const voiceToUse = ensureVoiceSelected();
 
     if (!voiceToUse) {
       showError(i18n('please_select_voice'));

@@ -1,15 +1,14 @@
 /**
  * 点击跳转集成测试：真实模块跑「整页朗读中点击句子 span → 跳到该句播放」。
  *
- * 验证音色单一来源设计的两条不变式：
- *  1. jumpToSentence 直接复用 state.selectedVoice，不再重新检测；
- *  2. 自动检测模式下，音色在「开始播放 / 开关开启 / 加载完成且有正文」时由
- *     resolveVoiceForText 落实进 selectedVoice（含两道兜底），之后不为 null。
+ * 验证音色单一来源设计的两条不变式（docs/adr/0002）：
+ *  1. jumpToSentence 直接复用 state.selectedVoice，不重新派生；
+ *  2. 未手选时由 ensureVoiceSelected 按界面语言派生默认音色并落实进
+ *     selectedVoice（含无匹配语种回退），派生不标记手选；手选优先于派生。
  *
- * 真实模块：state / reading-overlay / sentence-map / player/* / page-listeners；
- * 桩：ui / widget / i18n / text-input / voices / settings / selection 与 chrome
- * 依赖的 shared（detectLanguage 由桩按 globalThis.__detectLang 返回，便于模拟
- * 检测落空与无匹配音色的场景）。
+ * 真实模块：state / reading-overlay / sentence-map / player/* / page-listeners /
+ * shared/voice-default（纯函数，不桩）；桩：ui / widget / i18n / text-input /
+ * voices / settings / selection 与其余 chrome 依赖的 shared。
  *
  * 注意：覆盖层（reading-overlay）在句子变化时会重绘 span，点击必须查活 DOM；
  * 桩的 debounce 不做延时应直接放行，故 jumpToSentence 后立即断言同步部分，
@@ -50,12 +49,13 @@ const bundle = resolve(__dirname, '.clickjump.bundle.mjs');
 const entry = norm(resolve(__dirname, '../src/content/page-listeners.ts'));
 const statePath = norm(resolve(__dirname, '../src/content/state.ts'));
 const voiceSelPath = norm(resolve(__dirname, '../src/content/voices/voice-selection.ts'));
+const voiceDefaultPath = norm(resolve(__dirname, '../src/shared/voice-default.ts'));
 await esbuild.build({
   stdin: {
     contents: [
       `export { registerClickJumpListener, registerSelectionListener } from '${entry}';`,
       `export { state } from '${statePath}';`,
-      `export { resolveVoiceForText } from '${voiceSelPath}';`,
+      `export { ensureVoiceSelected } from '${voiceSelPath}';`,
     ].join('\n'),
     resolveDir: __dirname,
     loader: 'js',
@@ -71,6 +71,8 @@ await esbuild.build({
     {
       name: 'stub',
       setup(build) {
+        // 纯领域模块不桩，验证真实的「界面语言 → 默认音色」派生与兜底
+        build.onResolve({ filter: /voice-default$/ }, () => ({ path: voiceDefaultPath }));
         for (const m of ['ui', 'widget', 'i18n', 'text-input', 'voices', 'settings', 'selection']) {
           build.onResolve({ filter: new RegExp(`^\\.\\.?\\/${m}$`) }, (a) => ({ path: a.path, namespace: 'stub' }));
         }
@@ -124,8 +126,6 @@ await esbuild.build({
             export function resume() {}
             export function speak() { return true; }
             export function normalizeLang(l) { return l; }
-            // 受控的检测：未设置时默认中文，可置 null / 其它语言模拟落空与无匹配
-            export function detectLanguage() { return globalThis.__detectLang !== undefined ? globalThis.__detectLang : 'zh-CN'; }
             export function applyParentheticalFilter(t) { return t; }
             export function collectPageForReading() { return { units: [], map: { sentences: [], ranges: [], ownerIndex: [] } }; }
             export function getDisplayTextFromMap() { return ''; }
@@ -152,7 +152,7 @@ await esbuild.build({
 });
 
 const mod = await import(pathToFileURL(bundle).href);
-const { state, resolveVoiceForText } = mod;
+const { state, ensureVoiceSelected } = mod;
 
 // 真实的句子映射（独立打包 sentence-map，无桩，保证 map 与 DOM 一致）
 const smBundle = resolve(__dirname, '.clickjump-smap.bundle.mjs');
@@ -169,9 +169,10 @@ const units = [
 ];
 const map = sm.buildSentenceMap(units, units.map((u) => u.text));
 
-// 三个音色：中文 / 英文 / 默认（支持中英），用于分辨「复用」与「重新检测」
+// 四个音色：中文 / 英文 / 日文（无中英匹配）/ 双语默认，用于分辨派生命中与兜底
 const ZH = { name: 'zh-female', voice: 'zh_female', language: 'zh-CN', gender: 'Female' };
 const EN = { name: 'en-male', voice: 'en_male', language: 'en-US', gender: 'Male' };
+const JA = { name: 'ja-female', voice: 'ja_female', language: 'ja-JP', gender: 'Female' };
 const DEFAULT = { name: 'mimo_default', voice: 'mimo_default', language: 'zh-CN', gender: 'Female' };
 
 // 装配整页朗读中的真实 state
@@ -179,7 +180,8 @@ state.pageTextUnits = units;
 state.pageTextMap = map;
 state.inlineDisplayEnabled = true;
 state.autoScrollEnabled = true;
-state.autoDetectLanguage = true;
+state.voiceSelectionIsManual = false;
+state.interfaceLanguage = 'zh_CN';
 state.selectedVoice = null;
 state.playbackSpeed = 1;
 state.currentPlayRequestId = 0;
@@ -190,7 +192,7 @@ state.totalElapsedTime = 0;
 state.currentChunkStartTime = 0;
 state.currentVoice = null;
 state.currentChunkInfo = null;
-state.allVoices = [ZH, EN, DEFAULT];
+state.allVoices = [ZH, EN, JA, DEFAULT];
 state.textContent = { textContent: map.sentences.join(' '), innerText: map.sentences.join(' ') };
 state.sentencePlayer = {
   sentences: map.sentences,
@@ -211,7 +213,7 @@ state.audioPlayer = {
   play: async () => {}, pause() {}, addEventListener() {}, removeEventListener() {}, removeAttribute() {}, load() {},
 };
 state.voiceSearchInput = { value: '' };
-state.toggleCheckboxes = { autoDetectLanguage: { checked: true } };
+state.toggleCheckboxes = {};
 
 // 注册监听并用真实 reading-overlay 包裹句子 span
 mod.registerClickJumpListener();
@@ -240,29 +242,29 @@ function clickSpan(index) {
   span.dispatchEvent(new dom.window.MouseEvent('click', { clientX: 5, clientY: 5, bubbles: true }));
 }
 
-console.log('\n[手选模式：跳转直接复用已选音色，不重新检测]');
-state.autoDetectLanguage = false;
+console.log('\n[手选模式：跳转直接复用已选音色，界面语言不覆盖]');
+state.voiceSelectionIsManual = true;
 state.selectedVoice = ZH;
-globalThis.__detectLang = 'en-US'; // 若跳转重新检测，就会切到英文音色
+state.interfaceLanguage = 'en'; // 若跳转重新派生，就会切到英文音色
 
 await test('点击后立即移动到目标句', () => {
   clickSpan(2);
   assert.equal(state.sentencePlayer.currentIndex, 2);
 });
-await test('防抖后播放，且用的是已选音色（未重新检测）', async () => {
+await test('防抖后播放，且用的是已选音色（未重新派生）', async () => {
   await wait(300);
   assert.ok(cacheCalls.some((c) => c[0] === 'ensure' && c[1] === 2), '应加载目标句音频');
-  assert.equal(state.currentVoice, ZH, '跳转应复用 selectedVoice，而不是按检测切换');
+  assert.equal(state.currentVoice, ZH, '跳转应复用 selectedVoice，而不是按界面语言切换');
 });
 
-console.log('\n[自动检测模式：未落实音色前 selectedVoice 为空，点击不跳转]');
-state.autoDetectLanguage = true;
+console.log('\n[音色目录未加载：selectedVoice 为空，点击不跳转]');
+state.voiceSelectionIsManual = false;
 state.selectedVoice = null;
 state.currentVoice = null;
-globalThis.__detectLang = 'zh-CN';
+state.allVoices = [];
 cacheCalls.length = 0;
 
-await test('尚未落实音色时点击 span 不发起播放（符合设计）', async () => {
+await test('无可用音色时点击 span 不发起播放（符合设计）', async () => {
   state.sentencePlayer.currentIndex = 0;
   clickSpan(3);
   // 下标会乐观移动，但无音色时应早退：不加载音频、不播放
@@ -272,34 +274,52 @@ await test('尚未落实音色时点击 span 不发起播放（符合设计）',
   assert.equal(state.currentVoice, null, '无音色时不应开始播放');
 });
 
-console.log('\n[自动检测模式：resolveVoiceForText 落实单一来源，两道兜底生效]');
-await test('检测命中：落实为对应语言音色并写入 selectedVoice', () => {
-  globalThis.__detectLang = 'zh-CN';
+console.log('\n[跟随界面语言：ensureVoiceSelected 派生默认音色，手选优先]');
+state.allVoices = [ZH, EN, JA, DEFAULT];
+
+await test('中文界面 → 派生首个中文音色并落实为单一来源', () => {
+  state.interfaceLanguage = 'zh_CN';
+  state.voiceSelectionIsManual = false;
   state.selectedVoice = null;
-  const v = resolveVoiceForText(map.sentences.join(' '));
+  const v = ensureVoiceSelected();
   assert.equal(v, ZH);
   assert.equal(state.selectedVoice, ZH, '应写入 selectedVoice 作为单一来源');
+  assert.equal(state.voiceSelectionIsManual, false, '派生不标记手选');
   assert.ok(!!state.voiceSearchInput.value, '应同步搜索框');
 });
-await test('检测为空（歧义文本）：脚本回退落实音色', () => {
-  globalThis.__detectLang = null;
+await test('英文界面 → 派生首个英文音色', () => {
+  state.interfaceLanguage = 'en';
+  state.voiceSelectionIsManual = false;
   state.selectedVoice = null;
-  const v = resolveVoiceForText('hello world');
-  assert.ok(v, '检测为空时应脚本回退，不返回 null');
-  assert.equal(state.selectedVoice, v, '回退音色同样落实进 selectedVoice');
+  assert.equal(ensureVoiceSelected(), EN);
 });
-await test('检测到无匹配音色的语言：回退默认音色', () => {
-  globalThis.__detectLang = 'fr-FR'; // MiMo 仅中英语色
+await test('无匹配语种 → 回退双语默认音色 mimo_default', () => {
+  state.interfaceLanguage = 'en';
+  state.voiceSelectionIsManual = false;
   state.selectedVoice = null;
-  const v = resolveVoiceForText('Bonjour le monde');
-  assert.equal(v, DEFAULT, '无匹配音色应回退 mimo_default');
-  assert.equal(state.selectedVoice, DEFAULT);
+  state.allVoices = [JA, DEFAULT]; // 无英文音色
+  assert.equal(ensureVoiceSelected(), DEFAULT, '无英文音色应回退 mimo_default');
+  state.allVoices = [ZH, EN, JA, DEFAULT];
 });
-await test('落实后点击跳转：直接复用落实的音色', async () => {
-  globalThis.__detectLang = 'fr-FR';
+await test('音色目录为空 → 返回现状（保留 null），不崩溃', () => {
+  state.allVoices = [];
   state.selectedVoice = null;
-  resolveVoiceForText('Bonjour le monde'); // 模拟开始播放时的落实
-  assert.equal(state.selectedVoice, DEFAULT);
+  state.voiceSelectionIsManual = false;
+  assert.equal(ensureVoiceSelected(), null);
+  state.allVoices = [ZH, EN, JA, DEFAULT];
+});
+await test('手选音色优先于界面语言派生，不被覆盖', () => {
+  state.interfaceLanguage = 'en';
+  state.voiceSelectionIsManual = true;
+  state.selectedVoice = ZH;
+  assert.equal(ensureVoiceSelected(), ZH, '手选优先，英文界面不切走中文音色');
+});
+await test('派生后点击跳转：直接复用落实的音色', async () => {
+  state.interfaceLanguage = 'zh_CN';
+  state.voiceSelectionIsManual = false;
+  state.selectedVoice = null;
+  ensureVoiceSelected(); // 模拟音色加载完成时的派生
+  assert.equal(state.selectedVoice, ZH);
   state.sentencePlayer.currentIndex = 0;
   state.currentVoice = null;
   cacheCalls.length = 0;
@@ -307,7 +327,7 @@ await test('落实后点击跳转：直接复用落实的音色', async () => {
   assert.equal(state.sentencePlayer.currentIndex, 4);
   await wait(300);
   assert.ok(cacheCalls.some((c) => c[0] === 'ensure' && c[1] === 4), '应加载目标句音频');
-  assert.equal(state.currentVoice, DEFAULT, '跳转复用落实的默认音色');
+  assert.equal(state.currentVoice, ZH, '跳转复用派生的默认音色');
 });
 
 for (const f of ['.clickjump.bundle.mjs', '.clickjump-smap.bundle.mjs', '.clickjump-ro.bundle.mjs']) {
@@ -315,5 +335,5 @@ for (const f of ['.clickjump.bundle.mjs', '.clickjump-smap.bundle.mjs', '.clickj
 }
 console.log('\n=================================');
 console.log(`通过 ${passed}  /  失败 ${failed}`);
-console.log(`=================================\n`);
+console.log('=================================\n');
 if (failed > 0) process.exitCode = 1;

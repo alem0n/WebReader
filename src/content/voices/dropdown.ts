@@ -115,20 +115,15 @@ export function renderVoiceDropdown() {
   }
 }
 
-export function selectVoice(voice: PresetVoice, disableAutoDetect = true) {
+export function selectVoice(voice: PresetVoice) {
   logger.debug('selectVoice called:', {
     voice: voice?.name,
-    disableAutoDetect,
-    wasAutoDetect: state.autoDetectLanguage,
+    wasManual: state.voiceSelectionIsManual,
   });
 
-  (state as any).selectedVoice = voice;
-
-  if (disableAutoDetect) {
-    state.autoDetectLanguage = false;
-    if (state.toggleCheckboxes.autoDetectLanguage) state.toggleCheckboxes.autoDetectLanguage.checked = false;
-    logger.debug('Auto-detect disabled by user selection');
-  }
+  state.selectedVoice = voice;
+  // 手选音色落盘（name 持久化）；派生的默认音色不在此落盘，由 ensureVoiceSelected 保证标记
+  state.voiceSelectionIsManual = true;
 
   updatePlayButtonState();
   // Update tooltips to reflect new state

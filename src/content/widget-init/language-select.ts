@@ -6,6 +6,8 @@
  */
 import { state } from '../state';
 import { logger } from '../log';
+import { filterVoices } from '../voices';
+import { ensureVoiceSelected } from '../voices/voice-selection';
 import { updateLanguageSelectTooltip, updateLanguageButtonIcon, changeInterfaceLanguage } from '../i18n';
 
 /** 用当前界面语言回填下拉值与按钮图标（在 DOM 引用填充之后调用） */
@@ -29,6 +31,11 @@ export function bindLanguageSelect(): void {
       try {
         await changeInterfaceLanguage(selectedLocale);
         updateLanguageSelectTooltip(selectedLocale);
+        // 未手选音色时，默认音色跟随界面语言重新派生（落实单一来源并同步搜索框 / 下拉选中态）
+        if (!state.voiceSelectionIsManual) {
+          ensureVoiceSelected();
+          filterVoices('');
+        }
         logger.debug('Language change completed successfully');
       } catch (error) {
         logger.error('Error changing language:', error);

@@ -24,7 +24,7 @@ export function initWidgetStateDefaults(): void {
   state.isCollectPageLoading = false;
   state.isCancelled = false; // Flag to cancel ongoing requests when Clear/Stop is pressed
   state.currentChunkInfo = null; // Store current chunk info for navigation
-  state.autoDetectLanguage = true;
+  state.voiceSelectionIsManual = false; // 默认跟随界面语言，手选由存储恢复
   state.removeParentheticals = true; // 朗读前删除括号及其中的内容（可开关，默认开）
   state.playbackSpeed = 1.0;
   state.sentencePlayer = null;

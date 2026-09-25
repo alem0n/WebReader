@@ -1,6 +1,7 @@
 /** Voices: load / filter / render voice list, select a voice. */
-import { state, voiceSearchInput, voiceDropdown, voiceLoadingIndicator, toggleCheckboxes, speedSelect } from './state';
+import { state, voiceSearchInput, voiceDropdown, voiceLoadingIndicator, speedSelect } from './state';
 import type { PresetVoice } from '../shared/types';
+import { pickDefaultVoice } from '../shared/voice-default';
 import { loadSettings, saveSettings, syncSpeedSelectFromStored } from './settings';
 import { hideError, showError } from './ui';
 import { i18n } from './i18n';
@@ -60,33 +61,16 @@ export async function loadVoices(options: { attempt?: number; authStage?: string
     // Initialize dropdown with all voices (no search term)
     filterVoices('');
 
-    // Try to restore saved voice
+    // 恢复用户手选音色，或按界面语言派生默认音色（落实为单一来源 selectedVoice）
     const settings = await loadSettings();
-
-    if (state.autoDetectLanguage) {
-      // When auto-detect is enabled, clear any saved voice
-      state.selectedVoice = null;
-      logger.debug('Auto-detect is ON, state.selectedVoice cleared');
-    } else if (settings.selectedVoice) {
-      // Restore saved voice only if auto-detect is OFF
-      const savedVoice = state.allVoices.find((v) => v.name === settings.selectedVoice);
-      if (savedVoice) {
-        selectVoice(savedVoice, false);
-        voiceSearchInput.value = savedVoice.name;
-        logger.debug('Restored saved voice:', savedVoice.name);
-      } else {
-        // Saved voice not found, enable auto-detect
-        state.autoDetectLanguage = true;
-        if (toggleCheckboxes.autoDetectLanguage) toggleCheckboxes.autoDetectLanguage.checked = true;
-        saveSettings();
-        logger.debug('Saved voice not found, enabled auto-detect');
-      }
+    const savedVoice = settings.selectedVoice ? state.allVoices.find((v) => v.name === settings.selectedVoice) : null;
+    if (savedVoice) {
+      selectVoice(savedVoice);
+      voiceSearchInput.value = savedVoice.name;
+      logger.debug('Restored saved voice:', savedVoice.name);
     } else {
-      // No voice selected and auto-detect is off, enable auto-detect
-      state.autoDetectLanguage = true;
-      if (toggleCheckboxes.autoDetectLanguage) toggleCheckboxes.autoDetectLanguage.checked = true;
-      saveSettings();
-      logger.debug('No voice selected, enabled auto-detect');
+      ensureVoiceSelected();
+      logger.debug('No saved voice in list, using interface-language default');
     }
 
     if (speedSelect) {
@@ -207,22 +191,33 @@ export function formatVoiceDisplayName(voice: PresetVoice) {
   return display || voice.name; // Fallback to technical name
 }
 
+// 确保当前已有可用音色：用户手选优先，否则按界面语言派生默认音色。
+// 与 content/voices/voice-selection 的 ensureVoiceSelected 同构（单一来源守卫）。
+export function ensureVoiceSelected(): PresetVoice | null {
+  if (state.voiceSelectionIsManual && state.selectedVoice) {
+    return state.selectedVoice;
+  }
+
+  const def = pickDefaultVoice(state.allVoices, state.interfaceLanguage);
+  if (!def) return state.selectedVoice;
+
+  logger.debug(`Default voice for interface language '${state.interfaceLanguage}': ${def.name}`);
+  state.selectedVoice = def;
+  state.voiceSelectionIsManual = false;
+  voiceSearchInput.value = formatVoiceDisplayName(def);
+  return def;
+}
+
 // Select a voice
-export function selectVoice(voice: PresetVoice, disableAutoDetect = true) {
+export function selectVoice(voice: PresetVoice) {
   logger.debug('selectVoice called:', {
     voice: voice?.name,
-    disableAutoDetect,
-    wasAutoDetect: state.autoDetectLanguage,
+    wasManual: state.voiceSelectionIsManual,
   });
 
   state.selectedVoice = voice;
-
-  // When manually selecting voice, disable auto-detect
-  if (disableAutoDetect) {
-    state.autoDetectLanguage = false;
-    if (toggleCheckboxes.autoDetectLanguage) toggleCheckboxes.autoDetectLanguage.checked = false;
-    logger.debug('Auto-detect disabled by user selection');
-  }
+  // 手选音色落盘（name 持久化）；派生的默认音色不在此落盘，由 ensureVoiceSelected 保证标记
+  state.voiceSelectionIsManual = true;
 
   saveSettings();
 }

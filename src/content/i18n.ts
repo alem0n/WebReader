@@ -131,13 +131,6 @@ export function applyInterfaceLanguage(locale: string) {
     logger.debug('Voice search placeholder updated');
   }
 
-  // Update auto-detect checkbox label
-  const autoDetectLabel = widget.querySelector('#auto-detect-language + span') as any;
-  if (autoDetectLabel) {
-    autoDetectLabel.textContent = i18n('auto_detect_language');
-    logger.debug('Auto-detect label updated');
-  }
-
   widget.querySelectorAll('[data-i18n-label]').forEach((el: any) => {
     const key = el.getAttribute('data-i18n-label');
     if (key) {

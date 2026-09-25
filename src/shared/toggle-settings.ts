@@ -10,7 +10,7 @@
  *
  * 文案一律写死中文（AGENTS.md §1.1：不新增 i18n 键）；界面语言切换不作用于本表。
  */
-export type ToggleKey = 'autoDetectLanguage' | 'removeParentheticals' | 'inlineDisplayEnabled' | 'autoScrollEnabled';
+export type ToggleKey = 'removeParentheticals' | 'inlineDisplayEnabled' | 'autoScrollEnabled';
 
 interface ToggleSettingDef {
   key: ToggleKey;
@@ -25,12 +25,6 @@ interface ToggleSettingDef {
 }
 
 export const TOGGLE_SETTINGS: ToggleSettingDef[] = [
-  {
-    key: 'autoDetectLanguage',
-    label: '自动检测语言',
-    title: '朗读前自动检测文本语言并选择匹配音色',
-    default: true,
-  },
   {
     key: 'removeParentheticals',
     label: '删除括号内容',
