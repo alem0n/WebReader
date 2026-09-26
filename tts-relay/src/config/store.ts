@@ -2,7 +2,7 @@
  * 配置文件持久化：解析路径、读取、原子写入。
  *
  * 文件位置：二进制所在目录的 config.json。
- * - 打包成单文件可执行（pkg / Node SEA）时，取可执行文件所在目录；
+ * - 打包成单文件可执行（Node SEA / pkg）时，取可执行文件所在目录；
  * - node 运行（node dist/index.js）时，入口在 dist/，取其上一级（项目根），
  *   避免把配置文件混进会被构建清空的 dist/。
  *
@@ -11,6 +11,7 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { DEFAULT_CONFIG, resolveConfig, type RelayConfig } from './index';
+import { isPackaged, packagedAppDir } from '../packaging/sea';
 
 const CONFIG_FILE_NAME = 'config.json';
 const LOG_FILE_NAME = 'tts-relay.log';
@@ -28,6 +29,7 @@ function argValue(flag: string): string | null {
 
 /** 应用根目录（配置文件与可执行文件同目录的落点） */
 export function resolveAppDir(): string {
+  if (isPackaged()) return packagedAppDir();
   const packaged = (process as unknown as { pkg?: boolean }).pkg === true;
   if (packaged) return dirname(process.execPath);
   // 编译产物在 dist/<子目录>/，取两级向上到项目根；__dirname 在运行时是 dist/config

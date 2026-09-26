@@ -22,6 +22,7 @@ import {
   type CommandMenuItem,
 } from './menu';
 import { copyText, openUrl } from './desktop';
+import { extractTrayBinary, isPackaged } from '../packaging/sea';
 import { logger } from '../log';
 
 export interface TrayDeps {
@@ -46,6 +47,10 @@ export class RelayTray {
 
   /** 创建托盘并注册回调；托盘二进制不可用时抛出，由上层回退到无头模式 */
   async start(): Promise<void> {
+    // 打包形态（SEA）下 node_modules 不存在，先把内嵌的托盘二进制释放到
+    // systray2 的缓存目录，再以 copyDir 让它从那里 spawn（见 packaging/sea.ts）
+    if (isPackaged()) extractTrayBinary();
+
     const SysTrayClass = (await import('systray2')).default;
     const menu = createMenu(this.deps.runtime.getState(), {
       version: this.deps.version,
@@ -53,7 +58,7 @@ export class RelayTray {
     });
     this.menu = menu;
 
-    const tray = new SysTrayClass({ menu, debug: false, copyDir: false });
+    const tray = new SysTrayClass({ menu, debug: false, copyDir: isPackaged() });
     this.tray = tray;
     await tray.ready();
     // 菜单已被库按初始状态渲染，建立指纹基线，之后 refresh 只发变化的项
