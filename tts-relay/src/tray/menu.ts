@@ -18,6 +18,8 @@ export const COMMAND = {
   hostLan: 'host:0.0.0.0',
   openBrowser: 'open-browser',
   copyAddress: 'copy-address',
+  /** 菜单顶部状态行：点击复制监听地址 */
+  status: 'status',
   reloadConfig: 'reload-config',
   exit: 'exit',
 } as const;
@@ -82,7 +84,7 @@ function truncate(text: string, limit = 48): string {
 /** 构建菜单（一次性；返回的 items 在 applyState 中被就地修改） */
 export function createMenu(state: RuntimeState, ctx: MenuContext): Menu {
   const items: CommandMenuItem[] = [
-    item('status', statusTitle(state), 'WebReader TTS 中转'),
+    item(COMMAND.status, statusTitle(state)),
     separator(),
     item(COMMAND.toggleListen, '开启监听'),
     separator(),
@@ -123,10 +125,13 @@ export function applyState(menu: Menu, state: RuntimeState): void {
   const child = (parentId: string, id: string): CommandMenuItem | undefined =>
     (byId(parentId)?.items as CommandMenuItem[] | undefined)?.find((it) => it.id === id);
 
-  const status = byId('status');
+  const status = byId(COMMAND.status);
   if (status) {
     status.title = statusTitle(state);
-    status.tooltip = state.status === 'error' ? state.errorMessage ?? '未知错误' : url;
+    status.tooltip =
+      state.status === 'error' ? state.errorMessage ?? '未知错误' : listening ? `点击复制 ${url}` : url;
+    // 仅监听时可点击复制：没在监听时地址不可用，状态行保持置灰
+    status.enabled = listening;
   }
   const toggle = byId(COMMAND.toggleListen);
   if (toggle) {

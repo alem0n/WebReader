@@ -129,6 +129,10 @@ export class RelayTray {
       case COMMAND.copyAddress:
         copyText(listenUrl(runtime.getConfig()));
         return;
+      case COMMAND.status:
+        // 菜单顶部状态行：点击即复制监听地址（仅在监听时可用，见 menu.applyState）
+        copyText(listenUrl(runtime.getConfig()));
+        return;
       case COMMAND.reloadConfig:
         await runtime.reload();
         return;

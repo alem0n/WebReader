@@ -61,6 +61,15 @@ t('菜单监听态：0.0.0.0 地址回退展示 127.0.0.1，勾选态正确', ()
   assert.ok(menu.tooltip.includes('已监听'), `tooltip=${menu.tooltip}`);
 });
 
+t('菜单状态行：仅监听时可点击复制地址', () => {
+  const stopped = createMenu({ status: 'stopped', config: DEFAULT_CONFIG, voicesCount: 0 }, { version: '0.2.0', configFilePath: '/tmp/x.json' });
+  assert.strictEqual(findById(stopped, 'status').enabled, false, '未监听时状态行应置灰，不可复制');
+  const listening = createMenu({ status: 'listening', config: DEFAULT_CONFIG, voicesCount: 0 }, { version: '0.2.0', configFilePath: '/tmp/x.json' });
+  const s = findById(listening, 'status');
+  assert.strictEqual(s.enabled, true, '监听时状态行应可点击');
+  assert.ok(s.tooltip.includes('点击复制'), `tooltip 应提示点击复制：${s.tooltip}`);
+});
+
 t('菜单错误态：状态行带原因且 tooltip 为完整错误', () => {
   const menu = createMenu({ status: 'error', config: DEFAULT_CONFIG, errorMessage: '地址已被占用', voicesCount: 0 }, { version: '0.2.0', configFilePath: '/tmp/x.json' });
   const status = findById(menu, 'status');
@@ -350,6 +359,16 @@ const isFree = (port) => new Promise((resolve) => {
         const tray = new RelayTray({ runtime: rt, version: '0.2.0' });
         await tray.dispatch({ type: 'clicked', seq_id: 1, __id: 1, item: { title: '关闭监听', tooltip: '', id: 'toggle-listen' } });
         assert.strictEqual(rt.getState().status, 'stopped');
+      });
+
+      await step('托盘派发 status：复制监听地址（不抛错即接线正确）', async () => {
+        const { RelayTray } = require(`${ROOT}/dist/tray/relay-tray.js`);
+        const rt = new RelayRuntime({ ...DEFAULT_CONFIG, port: port2 });
+        await rt.start();
+        const tray = new RelayTray({ runtime: rt, version: '0.2.0' });
+        // 剪贴板内容不便跨平台断言，派发不抛错即说明状态行复制接线正常
+        await tray.dispatch({ type: 'clicked', seq_id: 1, __id: 1, item: { title: '已监听 127.0.0.1:8361', tooltip: '', id: 'status' } });
+        await rt.stop();
       });
 
       fs.rmSync(cfgFile, { force: true });
