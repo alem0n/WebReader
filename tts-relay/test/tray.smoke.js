@@ -376,6 +376,32 @@ const isFree = (port) => new Promise((resolve) => {
     })().catch((e) => { failures++; console.log(`FAIL  运行时套件 — ${e.message}`); resolveTest(); });
   });
 
+  // ---- 打包层（SEA 胶水，纯逻辑；非打包形态下 isPackaged 为 false，验证分支安全）----
+  t('打包层：平台文件名与缓存目录路径', () => {
+    const sea = require(`${ROOT}/dist/packaging/sea.js`);
+    const { trayBinName, trayBinCacheDir, isPackaged, extractTrayBinary } = sea;
+    const expected = process.platform === 'win32' ? 'tray_windows_release.exe'
+      : process.platform === 'darwin' ? 'tray_darwin_release' : 'tray_linux_release';
+    assert.strictEqual(trayBinName(), expected);
+    // 缓存目录路径含 systray2 版本段，与库内部 getTrayBinPath 的拼接一致
+    const cacheSegs = trayBinCacheDir().split(path.sep);
+    assert.deepStrictEqual(cacheSegs.slice(-2), ['node-systray', require('systray2/package.json').version], `缓存目录=${trayBinCacheDir()}`);
+    // node 运行时（测试进程本身）不是 SEA
+    assert.strictEqual(isPackaged(), false, '测试进程不是打包形态');
+    // 非打包形态调用释放应是空操作：不抛错，且不改变磁盘状态（真实缓存文件可能因手动跑过 exe 而存在）
+    const before = fs.existsSync(path.join(trayBinCacheDir(), trayBinName()));
+    extractTrayBinary();
+    const after = fs.existsSync(path.join(trayBinCacheDir(), trayBinName()));
+    assert.strictEqual(after, before, '非打包形态不应改变托盘二进制的存在状态');
+  });
+
+  t('打包层：非打包形态 appDir 走项目根而非可执行文件目录', () => {
+    // resolveAppDir 在 node 形态下取 dist 两级向上（项目根），配置才不会落进 dist/
+    const dir = store.resolveAppDir();
+    assert.ok(dir.endsWith('tts-relay'), `appDir=${dir}`);
+    assert.ok(!dir.includes(path.join('dist')), `appDir 不应落在 dist 下：${dir}`);
+  });
+
   fs.rmSync(tmpLog, { force: true });
   console.log(`\n${failures === 0 ? 'ALL PASSED' : `${failures} FAILED`}`);
   process.exit(failures === 0 ? 0 : 1);
