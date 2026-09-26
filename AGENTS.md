@@ -126,6 +126,7 @@ esbuild.config.mjs  三入口构建（content / popup / background）+ public �
 | Web Audio API 播放音频 | 绕过页面 CSP 对 blob 媒体的拦截（`WebAudioPlayer`） |
 | 严格类型 strict 全项 + prettier | `noImplicitAny` / `strictNullChecks` / `useUnknownInCatchVariables` / `noUnusedLocals` / `noUnusedParameters`，`as any` 只允许用于确实无法收窄的 DOM 操作（如 `e.target`） |
 | `getWidget()` 返回 `HTMLElement \| null` | 悬浮窗可能尚未创建，类型必须体现可空；所有调用点据此判空或用可选链 |
+| tts-relay 托盘 UI 层与配置持久化 | 桌面驻留形态：`systray2` 预编译二进制零本机编译（Electron 太重 / nut-js 需 node-gyp）；新增 `runtime/` 层收拢服务生命周期，`tray/` 只调它不直接碰 http；配置三级优先（环境变量显式 > `config.json` > 默认），托盘改动即落盘即生效；托盘不可用时自动回退无头模式。见 [ADR 0004](docs/adr/0004-tts-relay-tray-ui-and-config-persistence.md) |
 
 > 上表是本项目的**决策日志**（原则八）。**新增关键架构决策时，在 `docs/adr/` 补一条 ADR
 > 并在本表登记链接**；仅调整既有决策的实现细节则更新本表原因列即可。
@@ -157,6 +158,11 @@ esbuild.config.mjs  三入口构建（content / popup / background）+ public �
 - **manifest 契约**【对外】：`public/manifest.json` 引用的入口文件名
   （`content.js` / `popup.js` / `background.js`）与 `_locales` 目录结构；构建产物路径不可漂移
 - **功能约定**【对外】：无登录、三条语音链路、预置音色表 —— 面向用户的事实见 `README.md`
+- **tts-relay `config.json` 键名**【对外，等同数据迁移】：`RelayConfig` 的 camelCase 字段
+  （`port` / `host` / `relayAuthToken` / `edgeEndpoint` / `trustedClientToken` /
+  `chromiumVersion` / `outputFormat` / `maxConcurrency` / `maxPerClient` / `maxQueueSize` /
+  `voicesTtlMs` / `synthTimeoutMs`）是托盘菜单持久化到二进制所在目录的用户数据；
+  改键名必须提供迁移与回滚路径（旧文件读不出会静默回退默认，见 `config/store.ts`）
 
 ---
 

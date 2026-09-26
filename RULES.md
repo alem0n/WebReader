@@ -279,6 +279,9 @@ src/background   src/popup     src/content
   `npm run verify:relay`，一键全量用 `npm run verify:all`；
 - 后端的端点 / 令牌常量变更**不需要扩展发版**（这正是中转架构的价值）；
 - 错误码映射改动必须同步 `shared/tts.ts` 的 `isRetryableTtsError` 与 `background/relay-tts.ts`。
+- 分层：`runtime/relay-runtime.ts` 拥有服务生命周期（start / stop / update / reload），
+  `tray/` 只经它驱动，不直接调 `api/http`（`createRelayServer` 只装配处理器，listen 归运行时）；
+  配置入口是 `config/`（三级优先：环境变量显式 > `config.json` > 默认），见 ADR 0004。
 
 ---
 
