@@ -13,6 +13,7 @@ import { dirname, resolve } from 'node:path';
 import { DEFAULT_CONFIG, resolveConfig, type RelayConfig } from './index';
 
 const CONFIG_FILE_NAME = 'config.json';
+const LOG_FILE_NAME = 'tts-relay.log';
 
 function argValue(flag: string): string | null {
   const argv = process.argv.slice(2);
@@ -37,6 +38,13 @@ export function resolveConfigFilePath(): string {
   const override = argValue('--config') || process.env.RELAY_CONFIG_FILE || '';
   if (override.trim()) return resolve(override);
   return resolve(resolveAppDir(), CONFIG_FILE_NAME);
+}
+
+/** 后台运行时的日志文件路径（与配置文件同目录，托盘模式无控制台可看输出） */
+export function resolveLogFilePath(): string {
+  const override = process.env.RELAY_LOG_FILE || '';
+  if (override.trim()) return resolve(override);
+  return resolve(resolveAppDir(), LOG_FILE_NAME);
 }
 
 /**

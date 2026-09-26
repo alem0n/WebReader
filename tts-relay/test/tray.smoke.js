@@ -131,6 +131,59 @@ t('normalizeConfig：端口非法回退默认、枚举收紧', () => {
   assert.strictEqual(normalizeConfig({ ...DEFAULT_CONFIG, maxConcurrency: 999 }).maxConcurrency, DEFAULT_CONFIG.maxConcurrency);
 });
 
+// ---- 后台化判断（detach） ----
+const detach = require(`${ROOT}/dist/runtime/detach.js`);
+
+function withTty(isTty, argvExtra, envExtra, fn) {
+  const savedArgv = process.argv.slice();
+  const savedEnv = {};
+  Object.keys(envExtra).forEach((k) => { savedEnv[k] = process.env[k]; });
+  const savedIsTty = Object.getOwnPropertyDescriptor(process.stdout, 'isTTY');
+  process.argv = [process.argv[0], 'dist/index.js', ...argvExtra];
+  Object.entries(envExtra).forEach(([k, v]) => { if (v === undefined) delete process.env[k]; else process.env[k] = v; });
+  Object.defineProperty(process.stdout, 'isTTY', { configurable: true, value: isTty });
+  try { fn(); } finally {
+    process.argv = savedArgv;
+    Object.entries(savedEnv).forEach(([k, v]) => { if (v === undefined) delete process.env[k]; else process.env[k] = v; });
+    if (savedIsTty) Object.defineProperty(process.stdout, 'isTTY', savedIsTty);
+    else delete (process.stdout).isTTY;
+  }
+}
+
+t('needsBackgroundLaunch：托盘+TTY 才后台化', () => {
+  withTty(true, [], {}, () => {
+    assert.strictEqual(detach.needsBackgroundLaunch('tray'), true, '托盘+TTY 应后台化');
+  });
+});
+
+t('needsBackgroundLaunch：无头模式不后台化（交给进程管理器）', () => {
+  withTty(true, [], {}, () => {
+    assert.strictEqual(detach.needsBackgroundLaunch('headless'), false);
+  });
+});
+
+t('needsBackgroundLaunch：非 TTY（管道/无控制台）不重复拉起', () => {
+  withTty(false, [], {}, () => {
+    assert.strictEqual(detach.needsBackgroundLaunch('tray'), false);
+  });
+});
+
+t('needsBackgroundLaunch：已分离标记 / --foreground 不再后台化', () => {
+  withTty(true, [], { RELAY_DETACHED: '1' }, () => {
+    assert.strictEqual(detach.needsBackgroundLaunch('tray'), false, 'RELAY_DETACHED=1 不应再分离');
+  });
+  withTty(true, ['--foreground'], {}, () => {
+    assert.strictEqual(detach.needsBackgroundLaunch('tray'), false, '--foreground 应保持前台');
+  });
+});
+
+t('backgroundLaunchMessage：含日志路径与 PID', () => {
+  const msg = detach.backgroundLaunchMessage('/tmp/tts-relay.log', 12345);
+  assert.ok(msg.includes('关闭此终端不会退出程序'), msg);
+  assert.ok(msg.includes('/tmp/tts-relay.log'), msg);
+  assert.ok(msg.includes('PID 12345'), msg);
+});
+
 // ---- 持久化（临时文件，不污染仓库） ----
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'relay-cfg-'));
 const tmpConfig = path.join(tmpDir, 'config.json');
