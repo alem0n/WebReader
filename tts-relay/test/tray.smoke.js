@@ -7,12 +7,15 @@ const net = require('net');
 
 const ROOT = path.resolve(__dirname, '..');
 
-const { createMenu, applyState, listenUrl, PORT_CHOICES, HOST_CHOICES, ENDPOINT_CHOICES } = require(`${ROOT}/dist/tray/menu.js`);
+const { createMenu, applyState, listenUrl, flattenItems, snapshotOf, itemsToUpdate, PORT_CHOICES, HOST_CHOICES, ENDPOINT_CHOICES } = require(`${ROOT}/dist/tray/menu.js`);
 const { resolveConfig, normalizeConfig, DEFAULT_CONFIG } = require(`${ROOT}/dist/config/index.js`);
 const store = require(`${ROOT}/dist/config/store.js`);
 const { RelayRuntime } = require(`${ROOT}/dist/runtime/relay-runtime.js`);
 
 let failures = 0;
+// 测试里的日志写到临时文件，不落在仓库里（logger 读 RELAY_LOG_FILE）
+const tmpLog = path.join(os.tmpdir(), `relay-test-${process.pid}.log`);
+process.env.RELAY_LOG_FILE = tmpLog;
 const t = (name, fn) => {
   try { fn(); console.log(`PASS  ${name}`); } catch (e) { failures++; console.log(`FAIL  ${name} — ${e.message}`); };
 };
@@ -97,6 +100,32 @@ t('listenUrl：0.0.0.0 / :: 回退 127.0.0.1', () => {
   assert.strictEqual(listenUrl({ ...DEFAULT_CONFIG, host: '0.0.0.0', port: 8787 }), 'http://127.0.0.1:8787');
   assert.strictEqual(listenUrl({ ...DEFAULT_CONFIG, host: '::', port: 8787 }), 'http://127.0.0.1:8787');
   assert.strictEqual(listenUrl({ ...DEFAULT_CONFIG, host: '127.0.0.1', port: 8787 }), 'http://127.0.0.1:8787');
+});
+
+// ---- 菜单刷新指纹（核心修复：update-menu 不重绘菜单项，必须逐个 update-item）----
+// systray2 在初始化时按 DFS 顺序给菜单项分配 __id，测试里模拟这个分配
+function assignIds(menu) {
+  flattenItems(menu).forEach((it, i) => { it.__id = i + 1; });
+}
+
+t('itemsToUpdate：基线快照下没有待更新项', () => {
+  const menu = createMenu({ status: 'stopped', config: DEFAULT_CONFIG, voicesCount: 0 }, { version: '0.2.0', configFilePath: '/tmp/x.json' });
+  assignIds(menu);
+  assert.deepStrictEqual(itemsToUpdate(menu, snapshotOf(menu)), []);
+});
+
+t('itemsToUpdate：状态变化后只挑出真正变化的菜单项', () => {
+  const menu = createMenu({ status: 'stopped', config: DEFAULT_CONFIG, voicesCount: 0 }, { version: '0.2.0', configFilePath: '/tmp/x.json' });
+  assignIds(menu);
+  const snapshot = snapshotOf(menu);
+  applyState(menu, { status: 'listening', config: DEFAULT_CONFIG, voicesCount: 322 });
+  const changed = itemsToUpdate(menu, snapshot).map((it) => it.id);
+  // 状态行 / 开关 / 音色计数 / 浏览器与复制按钮的可用性都随状态变化
+  ['status', 'toggle-listen', 'about-voices', 'open-browser', 'copy-address'].forEach((id) =>
+    assert.ok(changed.includes(id), `应挑出变化项 ${id}`));
+  // 配置未变，端口 / 地址 / 端点快捷项不应被挑出
+  ['port:8787', 'host:127.0.0.1', 'endpoint:bing'].forEach((id) =>
+    assert.ok(!changed.includes(id), `不应挑出未变化项 ${id}`));
 });
 
 // ---- 配置优先级与归一化 ----
@@ -328,6 +357,7 @@ const isFree = (port) => new Promise((resolve) => {
     })().catch((e) => { failures++; console.log(`FAIL  运行时套件 — ${e.message}`); resolveTest(); });
   });
 
+  fs.rmSync(tmpLog, { force: true });
   console.log(`\n${failures === 0 ? 'ALL PASSED' : `${failures} FAILED`}`);
   process.exit(failures === 0 ? 0 : 1);
 })();

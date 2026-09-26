@@ -10,7 +10,7 @@ import type { RuntimeState } from '../runtime/relay-runtime';
 import type { RelayConfig } from '../config';
 import { trayIcon } from './icons';
 
-export type CommandMenuItem = MenuItem & { id?: string };
+export type CommandMenuItem = MenuItem & { id?: string; __id?: number };
 
 export const COMMAND = {
   toggleListen: 'toggle-listen',
@@ -19,6 +19,7 @@ export const COMMAND = {
   openBrowser: 'open-browser',
   copyAddress: 'copy-address',
   openConfigFile: 'open-config-file',
+  openLogFile: 'open-log-file',
   reloadConfig: 'reload-config',
   exit: 'exit',
 } as const;
@@ -105,6 +106,7 @@ export function createMenu(state: RuntimeState, ctx: MenuContext): Menu {
       ].map((it) => ({ ...it, enabled: false }))
     ),
     item(COMMAND.openConfigFile, '打开配置文件'),
+    item(COMMAND.openLogFile, '打开日志文件'),
     item(COMMAND.reloadConfig, '重新加载配置'),
     separator(),
     item(COMMAND.exit, '退出'),
@@ -170,4 +172,53 @@ export function applyState(menu: Menu, state: RuntimeState): void {
   }
 
   menu.tooltip = listening ? `WebReader TTS 中转 — 已监听 ${url}` : 'WebReader TTS 中转 — 未监听';
+}
+
+/**
+ * 深度展开所有菜单项（含子菜单子项）。
+ *
+ * systray2 在初始化时按 DFS 顺序给每个菜单项分配内部 __id，点击回指依赖它；
+ * 刷新时要逐项比对，也必须按同一顺序遍历。
+ */
+export function flattenItems(menu: Menu): CommandMenuItem[] {
+  const out: CommandMenuItem[] = [];
+  const walk = (items: CommandMenuItem[]): void => {
+    for (const it of items) {
+      out.push(it);
+      if (it.items) walk(it.items as CommandMenuItem[]);
+    }
+  };
+  walk(menu.items as CommandMenuItem[]);
+  return out;
+}
+
+/** 菜单项变化指纹：systray2 只在 title / checked / enabled 变化时才会真正重绘该项 */
+export function signatureOf(item: CommandMenuItem): string {
+  return `${item.title}|${item.checked ? 1 : 0}|${item.enabled === false ? 0 : 1}`;
+}
+
+/** 对整份菜单取指纹快照（首次渲染后建立基线，之后只发变化的项） */
+export function snapshotOf(menu: Menu): Map<number, string> {
+  const snapshot = new Map<number, string>();
+  for (const it of flattenItems(menu)) {
+    if (it.__id !== undefined) snapshot.set(it.__id, signatureOf(it));
+  }
+  return snapshot;
+}
+
+/**
+ * 与快照比对，挑出需要 update-item 的菜单项。
+ *
+ * 不能只发 update-menu：systray2 / getlantern 的 update-menu 只更新顶层
+ * （title / tooltip / icon），菜单项的标题 / 勾选 / 可用性必须逐项 update-item
+ * 才会重绘。只发 update-menu 会让菜单一直停在创建时的状态，用户看到的「开关监听」
+ * 与服务实际状态脱节，表现为点击毫无反应。
+ */
+export function itemsToUpdate(menu: Menu, snapshot: Map<number, string>): CommandMenuItem[] {
+  const changed: CommandMenuItem[] = [];
+  for (const it of flattenItems(menu)) {
+    if (it.__id === undefined) continue;
+    if (snapshot.get(it.__id) !== signatureOf(it)) changed.push(it);
+  }
+  return changed;
 }

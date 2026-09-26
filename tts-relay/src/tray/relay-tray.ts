@@ -10,9 +10,19 @@
 import type SysTray from 'systray2';
 import type { ClickEvent, Menu } from 'systray2';
 import type { RelayRuntime } from '../runtime/relay-runtime';
-import { ensureConfigFile, resolveConfigFilePath } from '../config/store';
-import { applyState, COMMAND, createMenu, listenUrl, type CommandMenuItem } from './menu';
+import { ensureConfigFile, resolveConfigFilePath, resolveLogFilePath } from '../config/store';
+import {
+  applyState,
+  COMMAND,
+  createMenu,
+  itemsToUpdate,
+  listenUrl,
+  signatureOf,
+  snapshotOf,
+  type CommandMenuItem,
+} from './menu';
 import { copyText, openFile, openUrl } from './desktop';
+import { ensureLogFile, logger } from '../log';
 
 export interface TrayDeps {
   runtime: RelayRuntime;
@@ -26,6 +36,9 @@ const ENDPOINT_PREFIX = 'endpoint:';
 export class RelayTray {
   private tray: SysTray | null = null;
   private menu: Menu | null = null;
+  /** 菜单项指纹快照（键是 systray2 分配的 __id），只对变化的项发 update-item */
+  private itemSnapshot = new Map<number, string>();
+  private tooltipSnapshot = '';
   private exiting = false;
   private readonly configFilePath = resolveConfigFilePath();
 
@@ -43,26 +56,57 @@ export class RelayTray {
     const tray = new SysTrayClass({ menu, debug: false, copyDir: false });
     this.tray = tray;
     await tray.ready();
-    tray.onError((error: Error) => console.warn(`[tts-relay] 托盘错误：${error.message}`));
+    // 菜单已被库按初始状态渲染，建立指纹基线，之后 refresh 只发变化的项
+    this.itemSnapshot = snapshotOf(menu);
+    this.tooltipSnapshot = menu.tooltip;
+    tray.onError((error: Error) => logger.warn(`托盘错误：${error.message}`));
     tray.onExit(() => {
       void this.onTrayExited();
     });
     tray.onClick((action: ClickEvent) => {
       void this.dispatch(action);
     });
-    console.log('[tts-relay] 托盘已就绪（右键图标查看监听地址 / 开关监听 / 改配置）');
+    logger.info(`托盘已就绪（右键图标查看监听地址 / 开关监听 / 改配置）`);
+    logger.info(`配置文件：${this.configFilePath} | 日志文件：${resolveLogFilePath()}`);
   }
 
-  /** 状态变化后整体刷新菜单（标题 / 勾选 / 可用性） */
+  /**
+   * 状态变化后刷新菜单（标题 / 勾选 / 可用性）。
+   *
+   * 顶层（tooltip）变化发 update-menu；菜单项变化必须逐个发 update-item——
+   * update-menu 不会重绘菜单项，只发它会让菜单停在创建时的状态，
+   * 表现为「点击开关监听毫无反应」（服务已变化但菜单不刷新）。
+   */
   refresh(): void {
     if (!this.tray || !this.menu) return;
     applyState(this.menu, this.deps.runtime.getState());
-    void this.tray.sendAction({ type: 'update-menu', menu: this.menu });
+    for (const it of itemsToUpdate(this.menu, this.itemSnapshot)) {
+      const key = it.__id as number;
+      this.itemSnapshot.set(key, signatureOf(it));
+      void this.tray.sendAction({ type: 'update-item', item: it }).catch((error: unknown) => {
+        logger.warn(`托盘菜单项更新失败（${it.title}）：${describe(error)}`);
+      });
+    }
+    if (this.menu.tooltip !== this.tooltipSnapshot) {
+      this.tooltipSnapshot = this.menu.tooltip;
+      void this.tray.sendAction({ type: 'update-menu', menu: this.menu }).catch((error: unknown) => {
+        logger.warn(`托盘顶层菜单更新失败：${describe(error)}`);
+      });
+    }
   }
 
   private async dispatch(action: ClickEvent): Promise<void> {
     const id = (action.item as CommandMenuItem).id;
     if (!id) return;
+    logger.info(`托盘点击：${id}`);
+    try {
+      await this.handleCommand(id);
+    } catch (error) {
+      logger.error(`托盘命令失败（${id}）：${describe(error)}`);
+    }
+  }
+
+  private async handleCommand(id: string): Promise<void> {
     const { runtime } = this.deps;
 
     switch (id) {
@@ -89,6 +133,10 @@ export class RelayTray {
         ensureConfigFile(runtime.getConfig());
         openFile(this.configFilePath);
         return;
+      case COMMAND.openLogFile:
+        ensureLogFile();
+        openFile(resolveLogFilePath());
+        return;
       case COMMAND.reloadConfig:
         await runtime.reload();
         return;
@@ -108,7 +156,7 @@ export class RelayTray {
   }
 
   private async exit(): Promise<void> {
-    console.log('[tts-relay] 用户从托盘退出');
+    logger.info('用户从托盘退出');
     await this.shutdown();
     process.exit(0);
   }
@@ -117,11 +165,11 @@ export class RelayTray {
   private async onTrayExited(): Promise<void> {
     if (this.exiting) return;
     this.exiting = true;
-    console.warn('[tts-relay] 托盘进程意外退出，中转服务随之关闭');
+    logger.warn('托盘进程意外退出，中转服务随之关闭');
     try {
       await this.deps.runtime.shutdown();
     } catch (error) {
-      console.warn(`[tts-relay] 关闭服务失败：${describe(error)}`);
+      logger.warn(`关闭服务失败：${describe(error)}`);
     }
     process.exit(0);
   }
@@ -133,14 +181,14 @@ export class RelayTray {
     try {
       await this.deps.runtime.shutdown();
     } catch (error) {
-      console.warn(`[tts-relay] 关闭服务失败：${describe(error)}`);
+      logger.warn(`关闭服务失败：${describe(error)}`);
     }
     const tray = this.tray;
     if (tray && !tray.killed) {
       try {
         await tray.kill(false);
       } catch (error) {
-        console.warn(`[tts-relay] 关闭托盘失败：${describe(error)}`);
+        logger.warn(`关闭托盘失败：${describe(error)}`);
       }
     }
   }
