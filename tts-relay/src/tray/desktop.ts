@@ -21,14 +21,6 @@ export function openUrl(url: string): void {
   run(command, args, `打开 ${url}`);
 }
 
-/** 用默认编辑器打开文件（配置文件） */
-export function openFile(filePath: string): void {
-  const plat = currentPlatform();
-  const command = plat === 'win32' ? 'cmd' : plat === 'darwin' ? 'open' : 'xdg-open';
-  const args = plat === 'win32' ? ['/c', 'start', '', filePath] : [filePath];
-  run(command, args, `打开 ${filePath}`);
-}
-
 /** 复制文本到系统剪贴板（无对应工具时静默失败） */
 export function copyText(text: string): void {
   const plat = currentPlatform();

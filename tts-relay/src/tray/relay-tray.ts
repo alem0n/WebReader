@@ -10,7 +10,7 @@
 import type SysTray from 'systray2';
 import type { ClickEvent, Menu } from 'systray2';
 import type { RelayRuntime } from '../runtime/relay-runtime';
-import { ensureConfigFile, resolveConfigFilePath, resolveLogFilePath } from '../config/store';
+import { resolveConfigFilePath, resolveLogFilePath } from '../config/store';
 import {
   applyState,
   COMMAND,
@@ -21,8 +21,8 @@ import {
   snapshotOf,
   type CommandMenuItem,
 } from './menu';
-import { copyText, openFile, openUrl } from './desktop';
-import { ensureLogFile, logger } from '../log';
+import { copyText, openUrl } from './desktop';
+import { logger } from '../log';
 
 export interface TrayDeps {
   runtime: RelayRuntime;
@@ -128,14 +128,6 @@ export class RelayTray {
         return;
       case COMMAND.copyAddress:
         copyText(listenUrl(runtime.getConfig()));
-        return;
-      case COMMAND.openConfigFile:
-        ensureConfigFile(runtime.getConfig());
-        openFile(this.configFilePath);
-        return;
-      case COMMAND.openLogFile:
-        ensureLogFile();
-        openFile(resolveLogFilePath());
         return;
       case COMMAND.reloadConfig:
         await runtime.reload();

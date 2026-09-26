@@ -92,7 +92,7 @@ t('所有可点击菜单项都有 id 且唯一', () => {
   // 快捷项覆盖预期命令
   for (const p of PORT_CHOICES) assert.ok(ids.includes(`port:${p}`), `缺端口项 port:${p}`);
   for (const c of [...HOST_CHOICES, ...ENDPOINT_CHOICES]) assert.ok(ids.includes(c.id), `缺选项 ${c.id}`);
-  ['toggle-listen', 'open-browser', 'copy-address', 'open-config-file', 'reload-config', 'exit'].forEach((id) =>
+  ['toggle-listen', 'open-browser', 'copy-address', 'reload-config', 'exit'].forEach((id) =>
     assert.ok(ids.includes(id), `缺命令 ${id}`));
 });
 

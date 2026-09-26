@@ -51,12 +51,3 @@ export const logger = {
   warn: (message: string): void => log('WARN', message),
   error: (message: string): void => log('ERROR', message),
 };
-
-/** 确保日志文件存在（托盘「打开日志文件」前调一次，避免编辑器打开不存在的文件） */
-export function ensureLogFile(): void {
-  try {
-    appendFileSync(resolveLogFilePath(), '');
-  } catch {
-    // 忽略：打开失败时 desktop 层会告警
-  }
-}

@@ -18,8 +18,6 @@ export const COMMAND = {
   hostLan: 'host:0.0.0.0',
   openBrowser: 'open-browser',
   copyAddress: 'copy-address',
-  openConfigFile: 'open-config-file',
-  openLogFile: 'open-log-file',
   reloadConfig: 'reload-config',
   exit: 'exit',
 } as const;
@@ -105,8 +103,6 @@ export function createMenu(state: RuntimeState, ctx: MenuContext): Menu {
         item('about-config', `配置文件：${truncate(ctx.configFilePath, 56)}`, ctx.configFilePath),
       ].map((it) => ({ ...it, enabled: false }))
     ),
-    item(COMMAND.openConfigFile, '打开配置文件'),
-    item(COMMAND.openLogFile, '打开日志文件'),
     item(COMMAND.reloadConfig, '重新加载配置'),
     separator(),
     item(COMMAND.exit, '退出'),

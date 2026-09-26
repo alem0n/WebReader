@@ -85,8 +85,8 @@ export function writeConfigFile(config: RelayConfig): void {
 }
 
 /**
- * 确保配置文件存在：首次启动时尚无文件，托盘「打开配置文件」前调一次，
- * 让用户总能拿到一份完整可编辑的当前配置（无头模式不产生任何文件）。
+ * 确保配置文件存在：首次启动时尚无文件时写入一份完整配置。无头模式不产生任何文件；
+ * 此函数供「需要落盘一份当前配置」的场景调用。
  */
 export function ensureConfigFile(config: RelayConfig): void {
   const filePath = resolveConfigFilePath();
