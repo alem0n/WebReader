@@ -46,6 +46,20 @@ WebReader 的已知缺陷、临时方案与待清理项。每条写明**原因 /
 - **移除条件**：引入本地配置页（如复用 HTTP 服务起一个 `/_config` 页面）或改用
   支持输入的托盘 / 桌面框架（Tauri 等）后，删除快捷项折中并更新 ADR 0004。
 
+### TD-014 · SEA 打包只能单平台构建（`tts-relay`）
+
+- **原因**：Node SEA 的 `--build-sea` 把「当前 node 二进制 + JS bundle + assets」
+  注入为一个可执行文件，产物只在构建平台上运行；跨平台需在 Windows / macOS / Linux
+  分别执行 `npm run pack`（或在各平台准备 node 二进制走 postject 注入，较繁琐）。
+  这不是缺陷而是 SEA 的固有能力边界（ADR 0005 决策 1）。
+- **影响范围**：`tts-relay/pack.mjs`（按 `process.platform` 选托盘二进制与输出名）、
+  CI 发布流程（如需多平台产物，须按平台矩阵分别构建）。
+- **潜在风险**：发布流程若只在 Windows 跑，macOS / Linux 用户拿不到二进制；
+  旧版本 Node（< 25.5）没有 `--build-sea`，`pack.mjs` 退化为只产 blob 并提示，
+  不会自动引入 postject。
+- **移除条件**：改用支持交叉编译的方案（如 Bun compile + 各平台二进制，
+  或 CI 三平台矩阵 + 产物聚合）后，更新本条与 ADR 0005。
+
 ## 行数统计方法修正（重要）
 
 原登记表与 `AGENTS.md` 的行数普遍偏小，原因是**统计方法错误**：

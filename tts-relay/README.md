@@ -49,6 +49,25 @@ VOICES_TTL_MS=86400000       # 音色目录 TTL
 SYNTH_TIMEOUT_MS=60000       # 单段空闲超时（两帧之间最大间隔）
 ```
 
+## 打包为单文件可执行
+
+不想装 Node 的机器上，可以把 tts-relay 打成**单文件二进制**（Node SEA：可执行文件内含
+运行时与全部依赖，双击即用，无需本机编译工具链）：
+
+```bash
+npm install
+npm run pack    # → dist-pack/tts-relay[.exe]
+```
+
+产出物可直接拷到同平台的另一台机器运行（Windows 实测约 95MB）。
+
+- **托盘图标的底层二进制**（systray2 的预编译 Go 程序）在运行时被释放到
+  `~/.cache/node-systray/<systray2 版本>/`，首次启动写入一次，之后直接复用；
+- 打包后 `config.json` 与 `tts-relay.log` 仍在**可执行文件同目录**，可按「关于」菜单显示的路径找到；
+- **单平台构建**：SEA 产物只在构建平台上运行，跨平台需分别在 Windows / macOS / Linux 上执行
+  `npm run pack`（或准备各平台 node 二进制走 postject，见 ADR 0005）；
+- 打包出的二进制同样支持 `--headless` / `--foreground` 参数，行为与 node 形态一致。
+
 ## 托盘模式（桌面驻留）
 
 `npm start`（或 `node dist/index.js`）默认进入托盘模式：**先把自己转入后台**（脱离启动它的
@@ -143,8 +162,11 @@ src/
   runtime/       运行时：持有引擎 / 音色 / 队列 / HTTP 服务，start / stop / update / reload +
                  托盘模式后台化（detach.ts：脱离启动终端、输出转日志文件）
   tray/          托盘 UI：菜单构建（menu.ts）/ 点击派发（relay-tray.ts）/ 图标 / 桌面小操作
+  packaging/sea.ts   打包形态（Node SEA）胶水：托盘二进制释放 / 打包探测 / 应用目录解析
   log.ts         文件日志（带时间戳，托盘后台运行时全靠它排障）
   index.ts       启动入口：托盘模式（默认）/ 无头模式 + 不可用时回退
+pack.mjs        打包脚本（npm run pack）：esbuild 单文件 + node --build-sea → dist-pack/
+test/           单元测试（unit.js）/ 托盘与配置冒烟（tray.smoke.js）/ 打包产物端到端（sea.e2e.cjs）
 ```
 
 **部署形态**：无状态 + 可水平扩展。合成是「每段一条短连接」，进程内只需令牌的
