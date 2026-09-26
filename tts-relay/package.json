@@ -1,6 +1,6 @@
 {
   "name": "tts-relay",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "WebReader 扩展的 TTS 中转后端：把 Edge TTS 的 WSS + Sec-MS-GEC 协议漂移吸收在后端，对扩展暴露 HTTP 短连接",
   "private": true,
   "type": "commonjs",
@@ -8,10 +8,12 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc",
     "start": "node dist/index.js",
-    "test": "node test/unit.js",
+    "start:headless": "node dist/index.js --headless",
+    "test": "node test/unit.js && node test/tray.smoke.js",
     "dev": "node dist/index.js"
   },
   "dependencies": {
+    "systray2": "^2.1.4",
     "ws": "^8.18.0"
   },
   "devDependencies": {

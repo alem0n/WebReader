@@ -1,50 +1,85 @@
 /**
- * tts-relay 入口：加载配置 → 构建 Edge 引擎 / 音色目录 / 并发队列 → 启动 HTTP。
+ * tts-relay 入口：装填配置 → 按运行形态启动。
  *
- * 部署形态：无状态 + 可水平扩展（合成是「每段一条短连接」，进程内只需令牌的
- * 窗口级 TTL 缓存，无需长连接池）。多副本 + 负载均衡即分布式。
+ * 两种形态：
+ * - 托盘模式（默认）：进程驻留为系统托盘图标，右键菜单可查看监听地址、开关监听、
+ *   改监听地址 / 端口 / Edge 端点；改动持久化到可执行文件同目录的 config.json
+ *   （路径解析与优先级见 config/store.ts 与 README）。
+ * - 无头模式（`--headless` / `--no-tray` / `HEADLESS=1`）：沿用环境变量配置，
+ *   供服务器 / 容器部署，行为与改造前一致。
+ *
+ * 托盘不可用（无桌面、二进制缺失）时自动回退无头模式，保证服务始终可用。
  */
-import { loadConfig } from './config';
-import { EdgeEngine } from './engines/edge';
-import { VoiceCatalog } from './engines/edge/voices';
-import { resolveEndpoints } from './engines/edge/constants';
-import { ConcurrencyQueue } from './queue';
-import { createRelayServer } from './api/http';
+import { loadConfig } from './config/store';
+import { RelayRuntime } from './runtime/relay-runtime';
+import { RelayTray } from './tray/relay-tray';
+import type { RelayConfig } from './config';
+
+// tts-relay 版本（关于菜单展示）。用 require 直接取根 package.json，
+// 避开 tsc rootDir=src 对 import json 的限制
+const { version } = require('../../package.json') as { version: string };
+
+function isHeadlessMode(): boolean {
+  if (process.argv.slice(2).some((arg) => arg === '--headless' || arg === '--no-tray')) return true;
+  const env = (process.env.HEADLESS ?? '').trim().toLowerCase();
+  return env === '1' || env === 'true' || env === 'yes';
+}
 
 async function main(): Promise<void> {
   const config = loadConfig();
-  const endpoints = resolveEndpoints(config.edgeEndpoint);
+  if (isHeadlessMode()) {
+    await runHeadless(config);
+    return;
+  }
+  try {
+    await runTray(config);
+  } catch (error) {
+    console.warn(`[tts-relay] 托盘模式不可用（${describe(error)}），回退到无头服务模式`);
+    await runHeadless(config);
+  }
+}
 
-  const engine = new EdgeEngine(
-    config.edgeEndpoint,
-    config.trustedClientToken,
-    config.chromiumVersion,
-    config.outputFormat,
-    config.synthTimeoutMs
-  );
-  const voices = new VoiceCatalog(endpoints, config.trustedClientToken, config.voicesTtlMs);
-  const queue = new ConcurrencyQueue(config.maxConcurrency, config.maxPerClient, config.maxQueueSize);
+async function runTray(config: RelayConfig): Promise<void> {
+  const runtime = new RelayRuntime(config);
+  const tray = new RelayTray({ runtime, version });
+  runtime.setListener(() => tray.refresh());
+  // 先把托盘立起来（失败则上层回退无头），再启动监听，菜单可实时反映启动过程
+  await tray.start();
+  await runtime.start();
+  installShutdownHandlers(runtime, tray);
+}
 
-  const server = createRelayServer({ config, engine, voices, queue });
+async function runHeadless(config: RelayConfig): Promise<void> {
+  const runtime = new RelayRuntime(config);
+  await runtime.start();
+  if (runtime.getState().status !== 'listening') {
+    console.error('[tts-relay] 监听失败，退出（错误见上方日志）');
+    process.exit(1);
+  }
+  installShutdownHandlers(runtime);
+}
 
-  // 启动时拉一次音色目录（失败不阻塞启动，/v1/health 会暴露诊断）
-  void voices
-    .list()
-    .then((list) => {
-      console.log(`[tts-relay] voices catalog loaded: ${list.length} voices`);
-    })
-    .catch((error: unknown) => {
-      console.warn(`[tts-relay] voices catalog failed at startup: ${(error as Error).message}`);
-    });
-
-  const shutdown = (signal: string) => {
+function installShutdownHandlers(runtime: RelayRuntime, tray?: RelayTray): void {
+  const handler = (signal: string): void => {
     console.log(`[tts-relay] ${signal} received, shutting down`);
-    server.close(() => process.exit(0));
+    void (async () => {
+      try {
+        if (tray) await tray.shutdown();
+        else await runtime.shutdown();
+      } catch (error) {
+        console.warn(`[tts-relay] 关闭失败：${describe(error)}`);
+      }
+      process.exit(0);
+    })();
     // 强制兜底：5s 内未关闭则退出
     setTimeout(() => process.exit(1), 5000).unref();
   };
-  process.on('SIGINT', () => shutdown('SIGINT'));
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => handler('SIGINT'));
+  process.on('SIGTERM', () => handler('SIGTERM'));
+}
+
+function describe(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 void main().catch((error: unknown) => {

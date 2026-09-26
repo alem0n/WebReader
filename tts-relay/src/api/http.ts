@@ -5,7 +5,7 @@
  * 窗口级 TTL 缓存，无需长连接池）。多副本 + 负载均衡即可分布式。
  */
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
-import { maskToken, authenticate } from './auth';
+import { authenticate } from './auth';
 import { ERROR_HTTP_STATUS, toErrorDto, type RelayErrorDto } from './errors';
 import type { ConcurrencyQueue } from '../queue';
 import type { EdgeEngine } from '../engines/edge';
@@ -102,14 +102,7 @@ export function createRelayServer(deps: ServerDeps): Server {
     }
   });
 
-  server.listen(config.port, config.host, () => {
-    console.log(
-      `[tts-relay] listening on http://${config.host}:${config.port} ` +
-        `endpoint=${config.edgeEndpoint} format=${config.outputFormat} ` +
-        `concurrency=${config.maxConcurrency}/${config.maxPerClient} auth=${maskToken(config.relayAuthToken)}`
-    );
-  });
-
+  // listen 由调用方（RelayRuntime）控制，本函数只负责装配请求处理器
   return server;
 }
 
