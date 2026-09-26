@@ -3,3 +3,6 @@ dist/
 *.log
 .env
 .env.local
+
+# SEA 打包产物（单文件可执行，构建生成，不入库）
+dist-pack/
