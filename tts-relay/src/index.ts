@@ -13,8 +13,9 @@
 import { loadConfig } from './config/store';
 import { RelayRuntime } from './runtime/relay-runtime';
 import { backgroundLaunchMessage, launchBackground, needsBackgroundLaunch, type RunMode } from './runtime/detach';
-import { resolveLogFilePath } from './config/store';
+import { resolveConfigFilePath, resolveLogFilePath } from './config/store';
 import { RelayTray } from './tray/relay-tray';
+import { logger } from './log';
 import type { RelayConfig } from './config';
 
 // tts-relay 版本（关于菜单展示）。用 require 直接取根 package.json，
@@ -30,6 +31,8 @@ function resolveMode(): RunMode {
 
 async function main(): Promise<void> {
   const mode = resolveMode();
+  logger.info(`tts-relay ${version} 启动（模式：${mode === 'tray' ? '托盘驻留' : '无头服务'}）`);
+  logger.info(`配置文件：${resolveConfigFilePath()} | 日志文件：${resolveLogFilePath()}`);
 
   // 托盘模式且挂在真实终端上：转入后台，让关掉终端不影响运行（详见 runtime/detach.ts）
   if (needsBackgroundLaunch(mode)) {
@@ -38,7 +41,7 @@ async function main(): Promise<void> {
       console.log(backgroundLaunchMessage(resolveLogFilePath(), pid));
       process.exit(0);
     }
-    console.warn('[tts-relay] 后台化失败，以前台模式继续运行');
+    logger.warn('后台化失败，以前台模式继续运行');
   }
 
   const config = loadConfig();
@@ -49,7 +52,7 @@ async function main(): Promise<void> {
   try {
     await runTray(config);
   } catch (error) {
-    console.warn(`[tts-relay] 托盘模式不可用（${describe(error)}），回退到无头服务模式`);
+    logger.warn(`托盘模式不可用（${describe(error)}），回退到无头服务模式`);
     await runHeadless(config);
   }
 }
@@ -68,7 +71,7 @@ async function runHeadless(config: RelayConfig): Promise<void> {
   const runtime = new RelayRuntime(config);
   await runtime.start();
   if (runtime.getState().status !== 'listening') {
-    console.error('[tts-relay] 监听失败，退出（错误见上方日志）');
+    logger.error('监听失败，退出（错误见日志文件）');
     process.exit(1);
   }
   installShutdownHandlers(runtime);
@@ -76,13 +79,13 @@ async function runHeadless(config: RelayConfig): Promise<void> {
 
 function installShutdownHandlers(runtime: RelayRuntime, tray?: RelayTray): void {
   const handler = (signal: string): void => {
-    console.log(`[tts-relay] ${signal} received, shutting down`);
+    logger.info(`${signal} received, shutting down`);
     void (async () => {
       try {
         if (tray) await tray.shutdown();
         else await runtime.shutdown();
       } catch (error) {
-        console.warn(`[tts-relay] 关闭失败：${describe(error)}`);
+        logger.warn(`关闭失败：${describe(error)}`);
       }
       process.exit(0);
     })();
@@ -93,11 +96,27 @@ function installShutdownHandlers(runtime: RelayRuntime, tray?: RelayTray): void 
   process.on('SIGTERM', () => handler('SIGTERM'));
 }
 
+/**
+ * 兜底诊断：把未捕获异常与未处理的拒绝写进日志文件，否则后台运行时无处可查。
+ * unhandledRejection 只记录不退出（多为点击回调里可恢复的错误）。
+ */
+function installCrashDiagnostics(): void {
+  process.on('uncaughtException', (error: unknown) => {
+    logger.error(`未捕获异常：${error instanceof Error ? error.stack ?? error.message : String(error)}`);
+    process.exit(1);
+  });
+  process.on('unhandledRejection', (reason: unknown) => {
+    logger.warn(`未处理的 Promise 拒绝：${reason instanceof Error ? reason.stack ?? reason.message : String(reason)}`);
+  });
+}
+
 function describe(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+installCrashDiagnostics();
+
 void main().catch((error: unknown) => {
-  console.error('[tts-relay] fatal:', error);
+  logger.error(`fatal: ${error instanceof Error ? error.stack ?? error.message : String(error)}`);
   process.exit(1);
 });

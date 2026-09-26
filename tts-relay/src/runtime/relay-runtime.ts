@@ -14,6 +14,7 @@ import { createRelayServer } from '../api/http';
 import { maskToken } from '../api/auth';
 import { loadConfig, writeConfigFile } from '../config/store';
 import { normalizeConfig, type RelayConfig } from '../config';
+import { logger } from '../log';
 
 export type RuntimeStatus = 'stopped' | 'starting' | 'listening' | 'error';
 
@@ -76,7 +77,7 @@ export class RelayRuntime {
     } catch (error) {
       this.server = null;
       this.errorMessage = describeError(error);
-      console.error(`[tts-relay] 启动失败：${this.errorMessage}`);
+      logger.error(`启动失败：${this.errorMessage}`);
       this.setStatus('error');
     }
   }
@@ -90,7 +91,7 @@ export class RelayRuntime {
     }
     this.server = null;
     await closeServer(server);
-    console.log('[tts-relay] 已停止监听');
+    logger.info('已停止监听');
     this.setStatus('stopped');
   }
 
@@ -112,7 +113,7 @@ export class RelayRuntime {
       writeConfigFile(this.config);
     } catch (error) {
       this.errorMessage = `配置写入失败：${describeError(error)}`;
-      console.warn(`[tts-relay] ${this.errorMessage}（改动仅对本会话生效）`);
+      logger.warn(`${this.errorMessage}（改动仅对本会话生效）`);
     }
     if (wasListening) {
       await this.restart();
@@ -168,8 +169,8 @@ export class RelayRuntime {
 
   private logListening(): void {
     const c = this.config;
-    console.log(
-      `[tts-relay] listening on http://${c.host}:${c.port} ` +
+    logger.info(
+      `listening on http://${c.host}:${c.port} ` +
         `endpoint=${c.edgeEndpoint} format=${c.outputFormat} ` +
         `concurrency=${c.maxConcurrency}/${c.maxPerClient} auth=${maskToken(c.relayAuthToken)}`
     );
@@ -182,11 +183,11 @@ export class RelayRuntime {
       .list()
       .then((list) => {
         this.voicesCount = list.length;
-        console.log(`[tts-relay] voices catalog loaded: ${list.length} voices`);
+        logger.info(`voices catalog loaded: ${list.length} voices`);
         this.notify();
       })
       .catch((error: unknown) => {
-        console.warn(`[tts-relay] voices catalog failed at startup: ${(error as Error).message}`);
+        logger.warn(`voices catalog failed at startup: ${(error as Error).message}`);
       });
   }
 
