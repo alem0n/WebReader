@@ -126,7 +126,8 @@ esbuild.config.mjs  三入口构建（content / popup / background）+ public �
 | Web Audio API 播放音频 | 绕过页面 CSP 对 blob 媒体的拦截（`WebAudioPlayer`） |
 | 严格类型 strict 全项 + prettier | `noImplicitAny` / `strictNullChecks` / `useUnknownInCatchVariables` / `noUnusedLocals` / `noUnusedParameters`，`as any` 只允许用于确实无法收窄的 DOM 操作（如 `e.target`） |
 | `getWidget()` 返回 `HTMLElement \| null` | 悬浮窗可能尚未创建，类型必须体现可空；所有调用点据此判空或用可选链 |
-| tts-relay 托盘 UI 层与配置持久化 | 桌面驻留形态：`systray2` 预编译二进制零本机编译（Electron 太重 / nut-js 需 node-gyp）；新增 `runtime/` 层收拢服务生命周期，`tray/` 只调它不直接碰 http；配置三级优先（环境变量显式 > `config.json` > 默认），托盘改动即落盘即生效；托盘不可用时自动回退无头模式。见 [ADR 0004](docs/adr/0004-tts-relay-tray-ui-and-config-persistence.md) |
+| tts-relay 托盘 UI 层与配置持久化 | 桌面驻留形态：`systray2` 预编译二进制零本机编译（Electron 太重 / nut-js 需 node-gyp）；新增 `runtime/` 层收拢服务生命周期，`tray/` 只调它不直接碰 http；配置三级优先（环境变量显式 > `config.json` > 默认），托盘改动即落盘即生效；启动即后台化（脱离启动终端，关终端不中断，日志转 `tts-relay.log`）；
+  托盘不可用时自动回退无头模式。见 [ADR 0004](docs/adr/0004-tts-relay-tray-ui-and-config-persistence.md) |
 
 > 上表是本项目的**决策日志**（原则八）。**新增关键架构决策时，在 `docs/adr/` 补一条 ADR
 > 并在本表登记链接**；仅调整既有决策的实现细节则更新本表原因列即可。

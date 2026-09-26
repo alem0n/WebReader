@@ -51,8 +51,9 @@ SYNTH_TIMEOUT_MS=60000       # 单段空闲超时（两帧之间最大间隔）
 
 ## 托盘模式（桌面驻留）
 
-`npm start`（或 `node dist/index.js`）默认进入托盘模式：进程驻留为系统托盘图标，
-**右键菜单**提供常用操作，改动持久化到**可执行文件同目录的 `config.json`**：
+`npm start`（或 `node dist/index.js`）默认进入托盘模式：**先把自己转入后台**（脱离启动它的
+终端），再驻留为系统托盘图标，**右键菜单**提供常用操作，改动持久化到**可执行文件同目录的
+`config.json`**：
 
 | 菜单项 | 作用 |
 | --- | --- |
@@ -77,6 +78,12 @@ SYNTH_TIMEOUT_MS=60000       # 单段空闲超时（两帧之间最大间隔）
 
 > 端口快捷项只列了常用值。**任意端口**请「打开配置文件」改 `port` 字段，
 > 再点「重新加载配置」；其余字段（鉴权 Token、并发上限、TTL、输出格式……）同理。
+
+**关闭终端不会退出程序**：托盘模式启动时会重新拉起一个脱离控制台的进程，随即退出当前
+终端里的进程（POSIX 下进入新会话，Windows 下位于新进程组），此后关闭终端、甚至退出
+当前 shell 都不影响运行。后台进程的输出写入与 `config.json` 同目录的 `tts-relay.log`
+（超过 2MB 时自动轮转一份 `.old`）。调试需要看实时输出时加 `--foreground` 保持前台：
+`npm start -- --foreground`。
 
 ## API
 
@@ -131,7 +138,8 @@ src/
   engines/edge/  Edge 引擎：令牌 / 文本预处理 / SSML / 帧编解码 / WSS 客户端 / 音色目录
   api/           HTTP 三个端点 + Bearer 鉴权 + 统一错误码
   queue/         per-client 并发上限 + 限流（自保）
-  runtime/       运行时：持有引擎 / 音色 / 队列 / HTTP 服务，start / stop / update / reload
+  runtime/       运行时：持有引擎 / 音色 / 队列 / HTTP 服务，start / stop / update / reload +
+                 托盘模式后台化（detach.ts：脱离启动终端、输出转日志文件）
   tray/          托盘 UI：菜单构建（menu.ts）/ 点击派发（relay-tray.ts）/ 图标 / 桌面小操作
   index.ts       启动入口：托盘模式（默认）/ 无头模式 + 不可用时回退
 ```
