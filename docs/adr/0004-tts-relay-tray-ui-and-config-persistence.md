@@ -73,6 +73,23 @@ systray2 无文本输入框，所以「配置监听端口」用**常用端口快
 detached 子进程继续运行）。无头模式不后台化（交给 systemd / docker 等进程管理器）；
 `RELAY_DETACHED=1` 标记子进程避免重复拉起，`--foreground` 供调试保持前台。
 
+### 8. 菜单刷新必须逐项 `update-item`（`update-menu` 只更新顶层）
+
+实测确认（Windows，systray2@2.1.4 的 Go 二进制）：`update-menu` 动作**只应用顶层菜单字段**
+（`title` / `tooltip` / `icon`），**不会重绘菜单项**的标题 / 勾选 / 可用性。最初 `refresh()`
+只发 `update-menu`，导致菜单永远停在创建时的状态（如「未监听 / 开启监听」），
+而服务实际已在监听——用户点击「开启监听」命中运行时的「已在监听直接返回」，
+没有状态变化、没有刷新，**表现为「点击监听毫无反应」**。
+
+修法：`refresh()` 改为对每个菜单项算指纹（`title|checked|enabled`，见
+`menu.signatureOf`），与上次渲染快照比对，**只对变化的项发 `update-item`**
+（`menu.itemsToUpdate`）；顶层 `tooltip` 变化才发 `update-menu`。指纹快照在托盘
+`ready()` 后按初始菜单建立基线。`update-item` 对叶子项与子菜单项都有效，
+更新勾选与标题均不造成子项重复（已验证：端口子菜单 8 项更新后仍是 8 项）。
+
+这是 systray2 / getlantern 一族的隐性协议行为，`tray/relay-tray.ts` 的 `refresh()`
+与 `menu.ts` 的 `itemsToUpdate` 注释里也写了，改这两处前必读。
+
 ## 结果
 
 - 正面影响：桌面用户双击即驻留，地址 / 状态 / 开关 / 常用配置全在右键菜单，配置落盘
@@ -83,6 +100,9 @@ detached 子进程继续运行）。无头模式不后台化（交给 systemd / 
   - 新增运行时依赖 `systray2`（及其传递依赖 `debug` / `fs-extra`），带来三平台
     预编译二进制（约几 MB）；
   - 托盘菜单能力受限（无输入框、无通知），端口等「非常用值」需编辑文件；
+  - 菜单刷新依赖 systray2 的 `update-item` 逐项重绘（决策 8）。这是实测得到的
+    隐性协议行为，库未在类型或文档中明说，升级 systray2 时必须回归「状态变化后
+    菜单是否真的更新」；
   - `config.json` 的键（`RelayConfig` 的 camelCase 字段）成为**面向用户数据的对外
     契约**（见 AGENTS.md §1.2），未来改键名要做迁移。
 - 触发重评估的条件：
