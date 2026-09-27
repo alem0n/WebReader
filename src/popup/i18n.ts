@@ -130,6 +130,17 @@ export function applyInterfaceLanguage(locale: string): void {
     const collapsed = voiceSelectorEl.classList.contains('voice-selector--collapsed');
     voicePanelToggle.title = i18n(collapsed ? 'expand' : 'minimize');
   }
+
+  updateLanguageToggleIcon();
+}
+
+// 中 / EN 双语切换按钮图标：与主题按钮同构，只显示一个字符图形——「将要切到的目标语言」
+// （当前中文 → 显 EN；当前英文或其它 → 显中），点击即切到该语言
+function updateLanguageToggleIcon(): void {
+  const useEl = document.querySelector('#language-toggle-icon');
+  if (!useEl) return;
+  const next = state.interfaceLanguage === 'zh_CN' ? '#icon-lang-en' : '#icon-lang-zh';
+  useEl.setAttribute('href', next);
 }
 
 // 点击切换按钮：中文 ⇄ 英文（按钮本身为「中」「EN」双字符图标，始终象征两种语言，无需随切换更新）
