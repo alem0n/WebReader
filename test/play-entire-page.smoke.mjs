@@ -43,6 +43,13 @@ globalThis.DocumentFragment = dom.window.DocumentFragment;
 globalThis.getComputedStyle = dom.window.getComputedStyle;
 globalThis.NodeFilter = dom.window.NodeFilter;
 
+// jsdom 无 clipboard，Node 全局 navigator 也没有：桩一个可读的剪贴板供 handlePaste 使用
+let clipboardText = '剪贴板里的一段足够长的正文内容';
+Object.defineProperty(globalThis, 'navigator', {
+  value: { clipboard: { readText: async () => clipboardText } },
+  configurable: true,
+});
+
 // 桩：player 依赖的 widget / ui / chrome 等
 const calls = {
   stop: 0,
@@ -79,27 +86,38 @@ await esbuild.build({
         build.onLoad({ filter: /.*/, namespace: 'stub' }, () => ({
           loader: 'js',
           contents: `
-            let __sp = { isPlaying: false, isPaused: false, currentIndex: 0, sentences: [], getDisplayText() { return ''; }, cleanup() {} };
-            Object.defineProperty(__sp, 'isPlaying', {
-              get() { window.__spReads = (window.__spReads || 0) + 1; return window.__spValue; },
-              set(v) { window.__spValue = v; },
-            });
+            // state 在 './state' 与 '../state' 两种路径下会被解析为两个模块，
+            // 用单例保证整份 bundle 共享同一个 state，测试才能通过 window.__stubState 读写它
+            if (!window.__singletonState) {
+              const __sp = { isPlaying: false, isPaused: false, currentIndex: 0, sentences: [], getDisplayText() { return ''; }, cleanup() {} };
+              Object.defineProperty(__sp, 'isPlaying', {
+                get() { window.__spReads = (window.__spReads || 0) + 1; return window.__spValue; },
+                set(v) { window.__spValue = v; },
+              });
+              window.__singletonState = {
+                pendingPageText: null,
+                apiKeyContainer: { style: { get display() { return window.__apiKeyScreen ? 'block' : 'none'; } } },
+                sentencePlayer: __sp,
+                audioPlayer: null,
+                audioCacheManager: null,
+                isCancelled: false,
+                isLoading: false,
+                currentVoice: null,
+                currentChunkInfo: null,
+                textContent: null,
+              };
+            }
             window.__spValue = false;
             window.__apiKeyScreen = false;
-            export const state = {
-              pendingPageText: null,
-              apiKeyContainer: { style: { get display() { return window.__apiKeyScreen ? 'block' : 'none'; } } },
-              sentencePlayer: __sp,
-              audioPlayer: null,
-              audioCacheManager: null,
-              isCancelled: false,
-              isLoading: false,
-              currentVoice: null,
-              currentChunkInfo: null,
-              textContent: null,
-            };
+            export const state = window.__singletonState;
             window.__stubState = state;
-            export function getWidgetElementById() { window.__widgetQueries = (window.__widgetQueries || 0) + 1; return null; }
+            export function getWidgetElementById(id) {
+              window.__widgetQueries = (window.__widgetQueries || 0) + 1;
+              // 只桩文本框与播放按钮：整页朗读的「填文本 + 自动播放」依赖这两个元素
+              if (id === 'text-content') return window.__fakeText = window.__fakeText || { textContent: '' };
+              if (id === 'play-pause-btn') return window.__fakeBtn = window.__fakeBtn || { disabled: true, click() { window.__autoClicks = (window.__autoClicks || 0) + 1; } };
+              return null;
+            }
             export function createWidget() {}
             export function getWidget() { return null; }
             export function showLoading() {}
@@ -107,6 +125,16 @@ await esbuild.build({
             export function hideError() {}
             export function updateStatusText() {}
             export function updateButtonStates() {}
+            export function updatePlayButtonState() {
+              // 忠实反映真实逻辑：播放按钮启用 = 有文本 && 有音色 && 非加载中
+              window.__playBtnStateUpdates = (window.__playBtnStateUpdates || 0) + 1;
+              const btn = window.__fakeBtn;
+              const txt = window.__fakeText;
+              if (btn && txt) {
+                const hasText = String(txt.textContent || '').trim().length > 0;
+                btn.disabled = !(hasText && window.__hasVoice);
+              }
+            }
             export function disableButtons() {}
             export function resetPlayerState() {}
             export function updateTimeProgress() {}
@@ -161,6 +189,8 @@ const player = await import(pathToFileURL(bundle).href);
 const stubState = window.__stubState;
 
 window.__spValue = false;
+// 模拟「音色已就绪」：播放按钮启用只差 hasText 这个条件
+window.__hasVoice = true;
 window.__calls = calls;
 
 console.log('\n[A1/A2] 无 API Key 时暂存正文');
@@ -196,6 +226,36 @@ test('未播放时不应触发停止逻辑的副作用', async () => {
   window.__apiKeyScreen = false;
   await player.playEntirePage();
   assert.equal(window.__spValue, false, '本就未播放，状态保持');
+});
+
+console.log('\n[TD] 停止并清除后再次整页朗读，播放按钮被重新启用');
+test('清除文本后 playEntirePage 会重算播放按钮启用态，自动播放不再被跳过', async () => {
+  window.__spValue = false;
+  window.__apiKeyScreen = false;
+  // 复位为「停止并清除」之后留下的小程序状态：文本为空、播放按钮被禁用
+  window.__fakeText = { textContent: '' };
+  window.__fakeBtn = { disabled: true, click() { window.__autoClicks = (window.__autoClicks || 0) + 1; } };
+  window.__playBtnStateUpdates = 0;
+  await player.playEntirePage();
+  // 文本被填入后必须重算按钮启用态，否则 btn.disabled 守卫会跳过自动点击
+  assert.ok((window.__playBtnStateUpdates || 0) > 0, '填入文本后应调用 updatePlayButtonState');
+  assert.equal(window.__fakeBtn.disabled, false, '有文本且有音色时，播放按钮应被重新启用');
+});
+
+console.log('\n[TD] 停止并清除后「粘贴并朗读」同样重算播放按钮启用态');
+test('清除文本后 handlePaste 会重算播放按钮启用态，自动播放不再被跳过', async () => {
+  window.__spValue = false;
+  window.__apiKeyScreen = false;
+  clipboardText = '剪贴板里的一段足够长的正文内容';
+  // 复位为「停止并清除」之后留下的状态：文本为空、播放按钮被禁用
+  window.__fakeText = { textContent: '' };
+  window.__fakeBtn = { disabled: true, click() { window.__autoClicks = (window.__autoClicks || 0) + 1; } };
+  stubState.textContent = window.__fakeText;
+  stubState.playPauseBtn = window.__fakeBtn;
+  window.__playBtnStateUpdates = 0;
+  await player.handlePaste();
+  assert.ok((window.__playBtnStateUpdates || 0) > 0, '粘贴文本后应调用 updatePlayButtonState');
+  assert.equal(window.__fakeBtn.disabled, false, '有文本且有音色时，播放按钮应被重新启用');
 });
 
 // 等待所有串行测试完成后汇总

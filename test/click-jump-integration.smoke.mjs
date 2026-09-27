@@ -90,6 +90,7 @@ await esbuild.build({
             export function showLoading() {}
             export function updateStatusText() {}
             export function updateButtonStates() {}
+            export function updatePlayButtonState() {}
             export function updateTextHighlight(i) { globalThis.__hl = i; }
             export function disableButtons() {}
             export function resetPlayerState() {}

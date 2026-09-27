@@ -9,7 +9,7 @@
  */
 import { state } from '../state';
 import { i18n } from '../i18n';
-import { showError, updateTextHighlight, highlightFirstSentenceIfNeeded } from '../ui';
+import { showError, updateTextHighlight, highlightFirstSentenceIfNeeded, updatePlayButtonState } from '../ui';
 import { createWidget, getWidget, getWidgetElementById } from '../widget';
 import { extractPageText, type TextUnit } from '../extractor';
 import { collectPageForReading, getDisplayTextFromMap, type SentenceMap } from '../sentence-map';
@@ -112,6 +112,9 @@ function setPageTextAndAutoPlay(units: TextUnit[], map: SentenceMap, attempts = 
 
   if (state.textContent && state.playPauseBtn) {
     state.textContent.textContent = getDisplayTextFromMap(map);
+    // 文本框被填入后必须重算播放按钮启用态：停止/清除时按钮因 hasText=false 被禁用，
+    // 若不刷新，下面的自动点击会被 btn.disabled 守卫跳过，导致「有文本却不发音」
+    updatePlayButtonState();
     state.pageTextUnits = units;
     state.pageTextMap = map;
 

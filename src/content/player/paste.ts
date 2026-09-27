@@ -6,7 +6,7 @@
  */
 import { state } from '../state';
 import { i18n } from '../i18n';
-import { showError, escapeHtml } from '../ui';
+import { showError, escapeHtml, updatePlayButtonState } from '../ui';
 import { removeHTMLTags, removeSquareBrackets } from '../text-input';
 import { createContentLogger } from '../log';
 import { handleStop } from './stop-clear';
@@ -28,6 +28,8 @@ export async function handlePaste() {
       }
       state.textContent!.textContent = '';
       state.textContent!.textContent = cleanedText.trim();
+      // 重算播放按钮启用态：清除后按钮因 hasText=false 仍被禁用，不刷新则自动点击被跳过
+      updatePlayButtonState();
       // 粘贴内容与整页映射无关：作废规范路径，回退到 setText 切分
       state.pageTextUnits = null;
       state.pageTextMap = null;
