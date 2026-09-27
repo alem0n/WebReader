@@ -219,9 +219,10 @@ src/background   src/popup     src/content
 - `page-fab.ts` — 页面内「朗读整页」悬浮按钮：可拖动 + 3 秒无点击自动吸附边缘，
   Shadow DOM 隔离，有可采集正文时才出现。
 - `extractor/` — 网页正文采集（selectors / site-rules / skip-patterns / pattern-match /
-  block-detection / addressable-text / traversal + `index.ts` 编排与再导出）；块级遍历
-  + 文本过滤，**只读不修改页面**；`collectPageUnits` 输出文档序、非重叠的段落单元
-  （元素 + 与 DOM 逐字对齐的「可寻址文本」）。
+  block-detection / addressable-text / traversal / translator-containers + `index.ts` 编排与再导出）；
+  块级遍历 + 文本过滤，**只读不修改页面**；`collectPageUnits` 输出文档序、非重叠的段落单元
+  （元素 + 与 DOM 逐字对齐的「可寻址文本」）；`translator-containers` 识别第三方翻译器
+  （kiss-translator）「仅译文」容器，使整页朗读在译文页上仍能采集到可见译文。
 - `sentence-map.ts` — 句子 → 段落单元 → **精确字符区间**映射（区间式分割，剔括号后可多段）；
   供逐句高亮与「点击跳转」反查。
 - `reading-overlay.ts` — 网页内逐句高亮的 DOM 覆盖层：把句子区间对应的文本节点包进透明
