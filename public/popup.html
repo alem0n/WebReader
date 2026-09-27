@@ -38,27 +38,34 @@
     </svg>
 
     <div class="page" id="player-container">
-      <!-- 顶部品牌区 + 导航胶囊 -->
+      <!-- 顶部标题栏：品牌在左；网页悬浮窗开关 + 界面语言切换在右 -->
+      <!-- 两者文案宽度稳定，且语言按钮位于行尾，文案变化不会挤动其他按钮 -->
       <header class="app-header">
-        <div class="app-brand">
-          <img class="app-brand-icon" src="icons/icon48.png" alt="" />
-          <h1 class="app-brand-name">WebReader</h1>
+        <div class="app-titlebar">
+          <div class="app-brand">
+            <img class="app-brand-icon" src="icons/icon48.png" alt="" />
+            <h1 class="app-brand-name">WebReader</h1>
+          </div>
+          <div class="app-titlebar-actions">
+            <button id="widget-toggle-btn" class="nav-pill nav-pill--compact" type="button" title="在当前网页显示/隐藏悬浮窗">
+              <svg class="nav-pill-icon" width="15" height="15" aria-hidden="true">
+                <use href="#icon-two-pages-play"></use>
+              </svg>
+              <span id="widget-toggle-text">悬浮窗</span>
+            </button>
+            <button id="language-toggle-btn" class="nav-pill nav-pill--compact" type="button" title="切换界面语言（中 / English）">
+              <span id="language-toggle-label">中 / EN</span>
+            </button>
+          </div>
         </div>
+
+        <!-- 引擎配置入口：单独成行，按钮文案随引擎 / 配置状态变化时不会挤动其他按钮 -->
         <nav class="app-nav">
-          <button id="widget-toggle-btn" class="nav-pill" type="button" title="在当前网页显示/隐藏悬浮窗">
-            <svg class="nav-pill-icon" width="16" height="16" aria-hidden="true">
-              <use href="#icon-two-pages-play"></use>
-            </svg>
-            <span id="widget-toggle-text">显示网页悬浮窗</span>
-          </button>
-          <span id="widget-toggle-status" class="widget-toggle-status hidden"></span>
           <button id="config-toggle-panel" class="nav-pill nav-pill--key" type="button" title="配置 / 切换语音引擎（MiMo / 后端中转）" aria-expanded="false">
             <span>⚙</span>
             <span id="config-toggle-label">配置 / 切换</span>
           </button>
-          <button id="language-toggle-btn" class="nav-pill" type="button" title="切换界面语言（中 / English）">
-            <span id="language-toggle-label">中 / EN</span>
-          </button>
+          <span id="widget-toggle-status" class="widget-toggle-status hidden"></span>
         </nav>
       </header>
 

@@ -13,6 +13,8 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-12);
+  /* 允许在标题栏空间不足时收缩，配合品牌名的 ellipsis 兜底，按钮绝不换行 */
+  min-width: 0;
 }
 
 .app-brand-icon {
@@ -27,19 +29,34 @@
 .app-brand-name {
   font-family: var(--font-feather);
   font-weight: 700;
-  font-size: var(--text-heading-sm);
+  /* 从 32px 收紧到 20px：给标题栏右侧的悬浮窗 / 语言按钮让出空间，避免同行换行 */
+  font-size: 20px;
   line-height: var(--leading-heading-sm);
   letter-spacing: -0.02em;
   color: var(--color-eager-green);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 标题栏：品牌在左，操作按钮靠右；两端对齐使文案宽度变化只向行尾伸缩 */
+.app-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-12);
+}
+
+.app-titlebar-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 6px;
 }
 
 .app-nav {
   /* 作为瞬态状态消息 absolute 定位的上下文 */
   position: relative;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--spacing-8);
 }
 
 /* Nav Language Pill —— 透明底 + 2px 描边 + 大写小字 */
@@ -73,6 +90,12 @@
 
 .nav-pill-icon {
   flex-shrink: 0;
+}
+
+/* 标题栏内的胶囊：收紧尺寸与品牌同行，避免 400px 弹窗里挤压换行 */
+.nav-pill--compact {
+  padding: 8px 10px;
+  font-size: var(--text-caption);
 }
 
 /* 引擎配置入口：蓝色强调（Outlined Account Button 语义） */
