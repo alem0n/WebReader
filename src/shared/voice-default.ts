@@ -6,8 +6,8 @@
  * 与 popup/voices.ts 的 voiceSelectionIsManual）。本模块不持有任何层状态，
  * 音色目录与界面语言均由调用方传入（AGENTS.md §0.2 领域模型边界）。
  *
- * 界面语言只有 en / zh_CN 两档（见 _locales 与 language-select 的语言条），
- * 映射到音色主语言前缀；无匹配语种时回退到目录首个音色，即各引擎的默认
+ * 界面语言只有 en / zh_CN 两档（由 popup 主页标题栏的中 / EN 按钮统一配置，
+ * 悬浮窗不再单独提供语言切换），映射到音色主语言前缀；无匹配语种时回退到目录首个音色，即各引擎的默认
  * 音色（由 background/voices 的 VoiceProvider 保证排在首位，如 MiMo 的
  * mimo_default 双语音色）。决策见
  * docs/adr/0002-voice-default-from-interface-language.md。

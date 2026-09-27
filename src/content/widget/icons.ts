@@ -27,18 +27,6 @@ export const WIDGET_ICON_SPRITES = `
         <symbol id="icon-clear" viewBox="0 0 24 24">
           <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
         </symbol>
-        <!-- Theme Toggle Icons -->
-        <symbol id="icon-sun" viewBox="0 0 24 24">
-          <g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-            <circle cx="12" cy="12" r="4"/>
-            <path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.4 5.4l1.8 1.8M16.8 16.8l1.8 1.8M18.6 5.4l-1.8 1.8M7.2 16.8l-1.8 1.8"/>
-          </g>
-        </symbol>
-
-        <symbol id="icon-moon" viewBox="0 0 24 24">
-          <path d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/>
-        </symbol>
-
         <symbol id="icon-minimize" viewBox="0 0 24 24">
           <path d="M19.5 13h-15v-2h15v2z"/>
         </symbol>
@@ -55,9 +43,9 @@ export const WIDGET_ICON_SPRITES = `
           <path d="M12 19.5L3.5 4.5h17L12 19.5z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
         </symbol>
 
-        <!-- App Icon：圆角绿底 + 白色播放三角（品牌标识） -->
+        <!-- App Icon：圆角绿底 + 白色播放三角（品牌标识，无描边） -->
         <symbol id="icon-app-neon" viewBox="0 0 24 24">
-          <rect x="2.5" y="2.5" width="19" height="19" rx="6" fill="#58cc02" stroke="#000437" stroke-width="2"/>
+          <rect x="2.5" y="2.5" width="19" height="19" rx="6" fill="#58cc02"/>
           <path d="M10 8.4l6.2 3.6-6.2 3.6z" fill="#ffffff"/>
         </symbol>
 

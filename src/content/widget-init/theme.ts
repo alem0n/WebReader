@@ -1,35 +1,25 @@
 /**
  * 悬浮窗外观：主题（亮 / 暗）与收起（minimized）。
  *
- * 主题存 localStorage（'tts-theme' === 'dark' 启用暗色变体）；
+ * 主题统一存 chrome.storage.local（INTERFACE_THEME_STORAGE），切换入口在
+ * popup 主页标题栏；悬浮窗创建时按存储主题打上 dark-theme 类（见 widget/index.ts），
+ * 主页切换后由 storage-sync 监听调用 applyWidgetTheme 即时跟随。
  * 收起态全部由 .minimized 类驱动（隐藏哪些元素、宽度与内边距见 widget 样式表），
  * 收起时保留 translate 并叠加 scale，避免拖拽位移被重置。
  */
 import { state } from '../state';
+import { getWidget } from '../widget';
 import { i18n } from '../i18n';
 
-/** 主题：读取存储并在切换时写回，widget 上增删 dark-theme 类 */
-export function initTheme(widget: HTMLElement): void {
-  state.isLightTheme = localStorage.getItem('tts-theme') !== 'dark';
-  if (!state.isLightTheme) {
-    widget.classList.add('dark-theme');
-    const themeIcon = state.themeToggleBtn!.querySelector('use') as any;
-    themeIcon.setAttribute('href', '#icon-sun');
-  }
-
-  state.themeToggleBtn!.addEventListener('click', () => {
-    state.isLightTheme = !state.isLightTheme;
-    widget.classList.toggle('dark-theme', !state.isLightTheme);
-
-    const themeIcon = state.themeToggleBtn!.querySelector('use') as any;
-    if (state.isLightTheme) {
-      themeIcon.setAttribute('href', '#icon-moon');
-      localStorage.setItem('tts-theme', 'light');
-    } else {
-      themeIcon.setAttribute('href', '#icon-sun');
-      localStorage.setItem('tts-theme', 'dark');
-    }
-  });
+/**
+ * 主题应用到悬浮窗（dark-theme 类的增删是唯一变化来源）。
+ *
+ * 创建时已按存储主题初始化该类，此处只同步 state；主页切换主题后
+ * 由 storage-sync 的存储变更监听调用本函数。
+ */
+export function applyWidgetTheme(dark: boolean): void {
+  const widget = getWidget();
+  widget?.classList.toggle('dark-theme', dark);
 }
 
 /** 收起 / 展开：按钮在头部与播放控制行之间移动，transform 只保留 translate */

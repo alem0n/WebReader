@@ -15,6 +15,7 @@
  */
 import { loadInterfaceLanguage } from '../i18n';
 import { state } from '../state';
+import { readInterfaceTheme } from '../../shared/settings';
 import { buildWidgetHTML } from './template';
 import { WIDGET_STYLES } from './styles';
 
@@ -91,11 +92,13 @@ async function doCreateWidget(): Promise<void> {
     await loadInterfaceLanguage();
   }
 
-  const voicePanelCollapsed = await readVoicePanelControlsCollapsedPref();
+  const [voicePanelCollapsed, darkTheme] = await Promise.all([readVoicePanelControlsCollapsedPref(), readInterfaceTheme()]);
 
   // Create widget container
   const widget = document.createElement('div');
   widget.id = 'edge-tts-widget';
+  // 主题由主页统一配置：创建时即打好 dark-theme 类，避免挂载后主题闪烁
+  widget.classList.toggle('dark-theme', darkTheme);
   widget.innerHTML = buildWidgetHTML(voicePanelCollapsed);
 
   // Inject CSS

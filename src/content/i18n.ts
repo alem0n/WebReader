@@ -75,33 +75,6 @@ export async function saveInterfaceLanguage(locale: string) {
   }
 }
 
-export function updateLanguageSelectTooltip(locale: string) {
-  const root = (document.getElementById('tts-widget-host') as any)?.shadowRoot || document;
-  state.languageSelect = root.getElementById
-    ? (root.getElementById('language-select') as any)
-    : (document.getElementById('language-select') as any);
-  if (!state.languageSelect) return;
-
-  // Get current selected value from dropdown
-  const currentValue = state.languageSelect.value;
-
-  // If no language is selected in dropdown, show placeholder
-  if (!currentValue || currentValue === '' || currentValue === 'none' || currentValue === null) {
-    state.languageSelect.title = i18n('voice_search_placeholder') || 'Search voices by name, language, or gender...';
-    return;
-  }
-
-  const languageNames: Record<string, string> = {
-    en: 'English',
-    zh_CN: '中文',
-  };
-
-  // Use currentValue from dropdown, fallback to locale parameter
-  const selectedLocale = currentValue || locale;
-  const languageName = languageNames[selectedLocale] || selectedLocale;
-  state.languageSelect.title = languageName;
-}
-
 export async function changeInterfaceLanguage(locale: string) {
   logger.info('Changing interface language to:', locale);
   await saveInterfaceLanguage(locale);
@@ -110,8 +83,6 @@ export async function changeInterfaceLanguage(locale: string) {
   logger.debug('Messages loaded, applying to UI...');
   // Apply the new language to all elements
   applyInterfaceLanguage(locale);
-  // Update language select tooltip
-  updateLanguageSelectTooltip(locale);
   logger.debug('Interface language changed successfully');
 }
 
@@ -165,7 +136,6 @@ export function applyInterfaceLanguage(locale: string) {
     '#stop-btn': 'stop',
     '#clear-btn': 'stop_and_clear',
     '#tts-widget-minimize': 'minimize',
-    '#tts-widget-theme-toggle': 'toggle_theme',
     '#tts-widget-close': 'close',
     '#error-close-btn': 'close',
   };
@@ -287,22 +257,6 @@ export function applyInterfaceLanguage(locale: string) {
   }
 
   logger.debug('Language application complete');
-}
-
-function getFlagSymbolId(locale: string) {
-  const map: Record<string, string> = {
-    en: 'flag-en-square',
-    zh_CN: 'flag-cn-square',
-  };
-  return map[locale] || 'flag-en-square';
-}
-
-export function updateLanguageButtonIcon(locale: string) {
-  if (!state.languageButton) return;
-  const svg = state.languageButton.querySelector('svg.flag-icon use') as any;
-  if (!svg) return;
-  const symbolId = getFlagSymbolId(locale);
-  svg.setAttribute('href', '#' + symbolId);
 }
 
 export function getTranslatedLanguageName(englishName: string) {

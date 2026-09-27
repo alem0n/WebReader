@@ -25,6 +25,14 @@ export const RELAY_TOKEN_STORAGE = 'relay_token';
 /** TTS 提供方设置在 chrome.storage.local 中的键 */
 export const TTS_PROVIDER_STORAGE = 'tts_provider';
 
+/**
+ * 界面主题设置在 chrome.storage.local 中的键。
+ *
+ * 主题切换入口在 popup 主页标题栏，悬浮窗通过存储变更监听跟随；
+ * 值为 'dark' 启用暗色变体，其余（含缺失）为亮色。
+ */
+export const INTERFACE_THEME_STORAGE = 'interfaceTheme';
+
 /** 默认 provider：未配置时走 MiMo 直连，保持既有行为不变 */
 export const DEFAULT_TTS_PROVIDER: TtsProvider = 'mimo';
 

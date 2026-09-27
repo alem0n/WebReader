@@ -25,13 +25,13 @@ import { dragStart, drag, dragEnd } from './ui';
 
 import { registerBackgroundMessages } from './background-messages';
 import { registerClickJumpListener, registerSelectionListener } from './page-listeners';
+import { registerStorageSync } from './storage-sync';
 import { fillWidgetDomRefs } from './widget-init/dom-refs';
 import { bindUserMenuNoOps, initAuthScreen, installWidgetShowLoginBridge } from './widget-init/auth-screen';
 import { initWidgetStateDefaults, initAudioPlayer } from './widget-init/audio-player';
-import { initTheme, initMinimize } from './widget-init/theme';
+import { initMinimize } from './widget-init/theme';
 import { installGlobalBridge } from './widget-init/global-bridge';
 import { bindVoiceSearch } from './widget-init/voice-search';
-import { syncLanguageSelect, bindLanguageSelect, bindLanguageStrip } from './widget-init/language-select';
 import { bindVoicePanelAndSpeed, bindPlayerControls } from './widget-init/controls';
 
 declare global {
@@ -64,6 +64,9 @@ registerBackgroundMessages();
 registerClickJumpListener();
 registerSelectionListener();
 
+// 主页（popup）改了界面语言 / 主题时，已打开的悬浮窗即时跟随（模块级，注册一次）
+registerStorageSync();
+
 // 暴露给外部（popup / background 注入脚本）调用：朗读整页
 window.playEntirePage = playEntirePage;
 
@@ -79,9 +82,8 @@ export async function initWidget(widgetElement: HTMLElement | null): Promise<voi
   // 1) 挂载完成 → 填充 state 的 DOM 引用（后续步骤全部依赖这一步）
   fillWidgetDomRefs(rootGetById);
 
-  // 2) 界面语言：应用到 widget 并回填下拉 / 图标
+  // 2) 界面语言：由主页统一配置，此处只把存储中的语言应用到 widget
   applyInterfaceLanguage(state.interfaceLanguage);
-  syncLanguageSelect();
 
   // 3) 认证界面（登录已移除，用户菜单为 no-op；无 Key 且无本地音色才引导配 Key）
   bindUserMenuNoOps();
@@ -91,14 +93,13 @@ export async function initWidget(widgetElement: HTMLElement | null): Promise<voi
   // 4) 状态默认值（含 SentencePlayer 与拖拽 / 提示状态初值）
   initWidgetStateDefaults();
 
-  // 5) 窗口行为：拖拽、关闭、主题、收起
+  // 5) 窗口行为：拖拽、关闭、收起（主题由主页统一配置，创建时已按存储打好 dark-theme 类）
   widget.addEventListener('mousedown', dragStart);
   document.addEventListener('mousemove', drag);
   document.addEventListener('mouseup', dragEnd);
   state.closeBtn!.addEventListener('click', () => {
     widget.style.display = 'none';
   });
-  initTheme(widget);
   initMinimize(widget);
 
   // 6) 全局桥接（保留 edgeTTS* 旧名字供外部脚本调用）
@@ -113,17 +114,13 @@ export async function initWidget(widgetElement: HTMLElement | null): Promise<voi
   // 9) 音色面板折叠 + 语速选择
   bindVoicePanelAndSpeed(widget, rootGetById);
 
-  // 10) 界面语言：下拉 change 与顶部语言条
-  bindLanguageSelect();
-  bindLanguageStrip();
-
-  // 11) 播放控制按钮 + 错误关闭
+  // 10) 播放控制按钮 + 错误关闭（界面语言切换入口在主页，由 storage-sync 同步）
   bindPlayerControls();
 
-  // 12) 读取存储设置并加载音色（开关表在读取存储之后渲染，勾选状态才与存储一致）
+  // 11) 读取存储设置并加载音色（开关表在读取存储之后渲染，勾选状态才与存储一致）
   await loadInitialSettings(rootGetById);
 
-  // 13) 暴露给外部的文本入口
+  // 12) 暴露给外部的文本入口
   window.playSelectedText = playSelectedText;
 }
 

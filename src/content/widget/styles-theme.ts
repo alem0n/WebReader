@@ -158,8 +158,7 @@ export const WIDGET_STYLES_THEME = `/* ==================== 用户菜单（覆�
     #edge-tts-widget.auth-mode .player-controls,
     #edge-tts-widget.auth-mode .status-container,
     #edge-tts-widget.auth-mode #error-message,
-    #edge-tts-widget.auth-mode .tts-widget-minimize,
-    #edge-tts-widget.auth-mode .tts-widget-theme-toggle {
+    #edge-tts-widget.auth-mode .tts-widget-minimize {
       display: none !important;
     }
 
@@ -202,19 +201,8 @@ export const WIDGET_STYLES_THEME = `/* ==================== 用户菜单（覆�
       fill: #ffffff;
     }
 
-    #edge-tts-widget.dark-theme .language-button,
-    #edge-tts-widget.dark-theme .language-strip-flag {
-      background: rgba(255, 255, 255, 0.08);
-      border-color: rgba(255, 255, 255, 0.45);
-    }
-
-    #edge-tts-widget.dark-theme .language-strip {
-      background: #000437;
-    }
-
     #edge-tts-widget.dark-theme #voice-search,
     #edge-tts-widget.dark-theme .speed-select,
-    #edge-tts-widget.dark-theme .language-select,
     #edge-tts-widget.dark-theme .text-content,
     #edge-tts-widget.dark-theme .apikey-input {
       background: rgba(255, 255, 255, 0.08);
