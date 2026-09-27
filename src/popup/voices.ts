@@ -69,7 +69,8 @@ export async function loadVoices(options: { attempt?: number; authStage?: string
     const savedVoice = resolveRestoredVoice(settings, state.allVoices);
     if (savedVoice) {
       selectVoice(savedVoice);
-      voiceSearchInput.value = savedVoice.name;
+      // 与下拉选中时一致，搜索框显示格式化后的音色名（恢复手选与手选两条路径显示统一）
+      voiceSearchInput.value = formatVoiceDisplayName(savedVoice);
       logger.debug('Restored saved voice:', savedVoice.name);
     } else {
       ensureVoiceSelected();

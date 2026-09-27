@@ -128,20 +128,27 @@ export function setupEventListeners() {
     }
   });
 
+  /**
+   * 聚焦 / 点击音色搜索框时展示完整备选列表。
+   *
+   * 不能拿 voiceSearchInput.value 当搜索词：输入框里显示的是「已选音色的显示名」
+   * （默认派生时为 "zh-CN - MiMo-默认"，恢复手选时为原始名 "MiMo-默认"），而
+   * filterVoices 只按 name / language / gender 匹配 —— 按显示名过滤会得到 0 条
+   * （下拉看不到任何备选）或 1 条（只能选到当前音色本身）。只有用户真正键入的文本
+   * 才是搜索词，由 input 事件处理；空搜索词即展示全部备选，与 content 侧一致。
+   */
+  function showAllVoicesOnOpen(): void {
+    if (state.allVoices.length === 0) return;
+    filterVoices('');
+    voiceDropdown.classList.remove('hidden');
+  }
+
   voiceSearchInput.addEventListener('focus', () => {
-    // Show dropdown on focus with all voices or filtered voices
-    if (state.filteredVoices.length > 0) {
-      filterVoices(voiceSearchInput.value);
-      voiceDropdown.classList.remove('hidden');
-    }
+    showAllVoicesOnOpen();
   });
 
   voiceSearchInput.addEventListener('click', () => {
-    // Show dropdown on click
-    if (state.filteredVoices.length > 0) {
-      filterVoices(voiceSearchInput.value);
-      voiceDropdown.classList.remove('hidden');
-    }
+    showAllVoicesOnOpen();
   });
 
   // Close dropdown when clicking outside
