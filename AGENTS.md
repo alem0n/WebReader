@@ -127,6 +127,7 @@ esbuild.config.mjs  三入口构建（content / popup / background）+ public �
 | 严格类型 strict 全项 + prettier | `noImplicitAny` / `strictNullChecks` / `useUnknownInCatchVariables` / `noUnusedLocals` / `noUnusedParameters`，`as any` 只允许用于确实无法收窄的 DOM 操作（如 `e.target`） |
 | `getWidget()` 返回 `HTMLElement \| null` | 悬浮窗可能尚未创建，类型必须体现可空；所有调用点据此判空或用可选链 |
 | **打包形态（Node SEA）单文件分发** | esbuild 打单文件 CJS + `node --build-sea`；托盘 Go 二进制不能进 JS 包，改由 SEA assets 内嵌、运行时释放到 systray2 缓存目录（`~/.cache/node-systray/<版本>/`）后以 `copyDir:true` 对接；版本号取自 `systray2/package.json` 不硬编码。打包态配置 / 日志取可执行文件同目录（`__dirname` 在 SEA 里是虚拟路径）。单平台构建，跨平台需分别在各平台执行。见 [ADR 0005](docs/adr/0005-tts-relay-single-executable-packaging.md) |
+| **界面语言 / 主题统一由主页配置** | 语言与主题是全局配置，悬浮窗只需跟随。主页是全局配置中心（引擎 / 音色 / 语速 / 开关），主题入口本就应在主页；原悬浮窗主题存网页自身 localStorage，与主页互不可见，两套界面会不一致。统一存 `chrome.storage.local`，悬浮窗经 `storage.onChanged` 即时跟随。见 [ADR 0006](docs/adr/0006-global-ui-config-from-popup.md) |
 | tts-relay 托盘 UI 层与配置持久化 | 桌面驻留形态：`systray2` 预编译二进制零本机编译（Electron 太重 / nut-js 需 node-gyp）；新增 `runtime/` 层收拢服务生命周期，`tray/` 只调它不直接碰 http；配置三级优先（环境变量显式 > `config.json` > 默认），托盘改动即落盘即生效；启动即后台化（脱离启动终端，关终端不中断，日志转 `tts-relay.log`）；
   托盘不可用时自动回退无头模式。见 [ADR 0004](docs/adr/0004-tts-relay-tray-ui-and-config-persistence.md) |
 
@@ -152,7 +153,8 @@ esbuild.config.mjs  三入口构建（content / popup / background）+ public �
   `RELAY_TTS_TIMEOUT_MS` / `MIMO_TTS_TIMEOUT_MS`
 - **storage 键名**【对外，等同数据迁移】：`MIMO_API_KEY_STORAGE`（`mimo_api_key`）、`RELAY_URL_STORAGE`
   （`relay_url`）、`RELAY_TOKEN_STORAGE`（`relay_token`）、`TTS_PROVIDER_STORAGE`
-  （`tts_provider`）、`LOCAL_STORAGE_SETTINGS_KEY`（`tts-settings`）、音色缓存键
+  （`tts_provider`）、`INTERFACE_THEME_STORAGE`（`interfaceTheme`，主页标题栏主题切换写入，
+  悬浮窗经存储变更监听跟随）、`LOCAL_STORAGE_SETTINGS_KEY`（`tts-settings`）、音色缓存键
   （`VOICES_CACHE_*`）—— 旧版本用户数据依赖它们
 - **错误响应结构**【内部】：`{ success: false, error, status?, code? }` 是扩展内前端依赖的契约，
   `isRetryableTtsError` 依赖其错误分类；**与 `tts-relay` 的错误码映射表是【对外】跨进程契约**，
