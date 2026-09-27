@@ -45,12 +45,18 @@
         <symbol id="icon-moon" viewBox="0 0 24 24">
           <path d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/>
         </symbol>
+        <!-- Language Icons（「中」「EN」字符图形，象征界面语言切换的两端） -->
+        <symbol id="icon-lang-zh" viewBox="0 0 24 24">
+          <text x="12" y="12" text-anchor="middle" dominant-baseline="central" font-size="19" font-weight="800" letter-spacing="0" fill="currentColor">中</text>
+        </symbol>
+        <symbol id="icon-lang-en" viewBox="0 0 24 24">
+          <text x="12" y="12" text-anchor="middle" dominant-baseline="central" font-size="16" font-weight="800" letter-spacing="0" fill="currentColor">EN</text>
+        </symbol>
       </defs>
     </svg>
 
     <div class="page" id="player-container">
-      <!-- 顶部标题栏：品牌在左；网页悬浮窗开关 + 界面语言切换在右 -->
-      <!-- 两者文案宽度稳定，且语言按钮位于行尾，文案变化不会挤动其他按钮 -->
+      <!-- 顶部标题栏：品牌在左；右侧三个按钮均为仅图标模式（悬浮窗 / 语言 / 主题），宽度固定不挤动 -->
       <header class="app-header">
         <div class="app-titlebar">
           <div class="app-brand">
@@ -58,16 +64,20 @@
             <h1 class="app-brand-name">WebReader</h1>
           </div>
           <div class="app-titlebar-actions">
-            <button id="widget-toggle-btn" class="nav-pill nav-pill--compact" type="button" title="在当前网页显示/隐藏悬浮窗">
+            <button id="widget-toggle-btn" class="nav-pill nav-pill--icon" type="button" title="在当前网页显示/隐藏悬浮窗">
               <svg class="nav-pill-icon" width="15" height="15" aria-hidden="true">
                 <use href="#icon-two-pages-play"></use>
               </svg>
-              <span id="widget-toggle-text">悬浮窗</span>
             </button>
-            <button id="language-toggle-btn" class="nav-pill nav-pill--compact" type="button" title="切换界面语言（中 / English）">
-              <span id="language-toggle-label">中 / EN</span>
+            <button id="language-toggle-btn" class="nav-pill nav-pill--icon" type="button" title="切换界面语言（中 / English）">
+              <svg class="nav-pill-icon" width="15" height="15" aria-hidden="true">
+                <use href="#icon-lang-zh"></use>
+              </svg>
+              <svg class="nav-pill-icon" width="15" height="15" aria-hidden="true">
+                <use href="#icon-lang-en"></use>
+              </svg>
             </button>
-            <button id="theme-toggle-btn" class="nav-pill nav-pill--compact nav-pill--icon" type="button" title="切换主题（亮色 / 暗色）">
+            <button id="theme-toggle-btn" class="nav-pill nav-pill--icon" type="button" title="切换主题（亮色 / 暗色）">
               <svg class="nav-pill-icon" width="15" height="15" aria-hidden="true">
                 <use href="#icon-moon"></use>
               </svg>

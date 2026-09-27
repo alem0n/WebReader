@@ -130,21 +130,10 @@ export function applyInterfaceLanguage(locale: string): void {
     const collapsed = voiceSelectorEl.classList.contains('voice-selector--collapsed');
     voicePanelToggle.title = i18n(collapsed ? 'expand' : 'minimize');
   }
-
-  updateLanguageToggleLabel();
 }
 
-// 中 / EN 双语切换按钮文案：显示「将要切换到的语言」
-function updateLanguageToggleLabel(): void {
-  const label = document.getElementById('language-toggle-label');
-  if (!label) return;
-  // 当前中文 → 显示可切到的英文；当前英文（或其它） → 显示可切到的中文
-  label.textContent = state.interfaceLanguage === 'zh_CN' ? 'EN' : '中文';
-}
-
-// 点击切换按钮：中文 ⇄ 英文
+// 点击切换按钮：中文 ⇄ 英文（按钮本身为「中」「EN」双字符图标，始终象征两种语言，无需随切换更新）
 export async function toggleInterfaceLanguage(): Promise<void> {
   const next = state.interfaceLanguage === 'zh_CN' ? 'en' : 'zh_CN';
   await changeInterfaceLanguage(next);
-  updateLanguageToggleLabel();
 }
