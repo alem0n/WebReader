@@ -11,6 +11,8 @@ import { setupDisabledTooltips, updateClearButton, updatePlayButtonState } from 
 import { saveSettings } from '../settings';
 import { createContentLogger } from '../log';
 import { formatVoiceName } from './format';
+// 引擎无关的音色过滤下沉 shared，与 popup 共用同一份，避免两层漂移
+import { matchVoiceSearchTerm } from '../../shared/voice-search';
 
 const logger = createContentLogger('voices');
 
@@ -29,16 +31,9 @@ export function filterVoices(searchTerm: any, _isStrictFilter = false, filterByL
     // Show all voices when no search term
     state.filteredVoices = [...state.allVoices];
   } else {
-    // Strict filter: search in name, language, and gender
-    state.filteredVoices = state.allVoices.filter((voice) => {
-      const nameMatch = voice.name?.toLowerCase().includes(term);
-      const languageMatch = voice.language?.toLowerCase().includes(term);
-      const genderMatch = voice.gender?.toLowerCase().includes(term);
-      // Also search in formatted name for better user experience
-      const formattedName = formatVoiceName(voice).toLowerCase();
-      const formattedMatch = formattedName.includes(term);
-      return nameMatch || languageMatch || genderMatch || formattedMatch;
-    });
+    // 引擎无关过滤：名称 / 语言代码 / 语言名（中英）/ 国家名 / 性别皆可命中，
+    // 与 popup 同一实现（shared/voice-search）
+    state.filteredVoices = state.allVoices.filter((voice) => matchVoiceSearchTerm(voice, term));
   }
 
   // Sort by language, then by voice name
