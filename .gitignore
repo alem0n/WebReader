@@ -29,3 +29,8 @@ test/.*.bundle.mjs
 
 # 临时验证脚本：抓真实页面人工检查采集质量，不纳入提交
 test/real-page.mjs
+
+# AI 代理工具链的本地脚手架（GitNexus 索引 / Claude 技能与指令文件，仅本机使用，不入库）
+.gitnexus/
+.claude/
+CLAUDE.md

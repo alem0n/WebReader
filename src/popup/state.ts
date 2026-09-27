@@ -7,7 +7,6 @@ export const state = {
   allVoices: [] as PresetVoice[],
   filteredVoices: [] as PresetVoice[],
   selectedVoice: null as PresetVoice | null,
-  isLoading: false,
   /** 音色是否为用户显式选择：true 沿用手选音色，false 按界面语言派生默认音色 */
   voiceSelectionIsManual: false,
   removeParentheticals: true, // 朗读前删除括号及其中的内容（可开关，默认开）
@@ -28,7 +27,6 @@ export const voiceSearchInput = document.getElementById('voice-search') as HTMLI
 export const voiceDropdown = document.getElementById('voice-dropdown') as HTMLElement;
 export const voiceLoadingIndicator = document.getElementById('voice-loading') as HTMLElement;
 export const speedSelect = document.getElementById('speed-select') as HTMLSelectElement;
-export const statusText = document.getElementById('status-text') as HTMLElement;
 export const errorMessage = document.getElementById('error-message') as HTMLElement;
 export const voiceSelectorEl = document.querySelector('.voice-selector') as HTMLElement;
 export const voicePanelToggle = document.getElementById('voice-panel-toggle') as HTMLElement;
