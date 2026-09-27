@@ -90,6 +90,14 @@
 
 .nav-pill-icon {
   flex-shrink: 0;
+  /* moon 为实心图标、sun 为描边图标，统一继承胶囊文字色 */
+  fill: currentColor;
+}
+
+/* 仅图标的胶囊：方形内边距，与同行文案胶囊等高 */
+.nav-pill--icon {
+  padding: 8px;
+  line-height: 0;
 }
 
 /* 标题栏内的胶囊：收紧尺寸与品牌同行，避免 400px 弹窗里挤压换行 */

@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="popup-config-panel.css" />
     <link rel="stylesheet" href="popup-voice-panel.css" />
     <link rel="stylesheet" href="popup-status.css" />
+    <link rel="stylesheet" href="popup-theme.css" />
   </head>
   <body>
     <!-- SVG Icon Sprites（描边加粗，贴合 DESIGN.md 的 mascot 描边风格） -->
@@ -34,6 +35,16 @@
           <path d="M14 2.5v6h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
           <path d="M15 17l3.5-2v4L15 17z" fill="currentColor"/>
         </symbol>
+        <!-- Theme Toggle Icons（与原悬浮窗主题按钮同款，随主题切换按钮移至主页标题栏） -->
+        <symbol id="icon-sun" viewBox="0 0 24 24">
+          <g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.4 5.4l1.8 1.8M16.8 16.8l1.8 1.8M18.6 5.4l-1.8 1.8M7.2 16.8l-1.8 1.8"/>
+          </g>
+        </symbol>
+        <symbol id="icon-moon" viewBox="0 0 24 24">
+          <path d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/>
+        </symbol>
       </defs>
     </svg>
 
@@ -55,6 +66,11 @@
             </button>
             <button id="language-toggle-btn" class="nav-pill nav-pill--compact" type="button" title="切换界面语言（中 / English）">
               <span id="language-toggle-label">中 / EN</span>
+            </button>
+            <button id="theme-toggle-btn" class="nav-pill nav-pill--compact nav-pill--icon" type="button" title="切换主题（亮色 / 暗色）">
+              <svg class="nav-pill-icon" width="15" height="15" aria-hidden="true">
+                <use href="#icon-moon"></use>
+              </svg>
             </button>
           </div>
         </div>
