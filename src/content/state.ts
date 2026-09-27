@@ -58,7 +58,6 @@ interface ContentState {
   // shared UI/voices helpers (previously initWidget-local)
   highlightedIndex: number;
   isUserTyping: boolean;
-  isLightTheme: boolean;
   isMinimized: boolean;
   voicePanelToggle: HTMLElement | null;
   voiceSearchClear: HTMLElement | null;
@@ -90,16 +89,12 @@ interface ContentState {
   header: HTMLElement | null;
   closeBtn: HTMLButtonElement | null;
   minimizeBtn: HTMLButtonElement | null;
-  themeToggleBtn: HTMLButtonElement | null;
   voiceSearchInput: HTMLInputElement | null;
   voiceDropdown: HTMLSelectElement | null;
   voiceLoadingIndicator: HTMLElement | null;
   /** 开关型配置的 checkbox（按 ToggleKey 索引，渲染时填充；禁用 / 同步状态统一遍历此表） */
   toggleCheckboxes: Partial<Record<ToggleKey, HTMLInputElement>>;
   speedSelect: HTMLSelectElement | null;
-  languageSelect: HTMLSelectElement | null;
-  languageButton: HTMLButtonElement | null;
-  languageStrip: HTMLElement | null;
   textContent: HTMLTextAreaElement | null;
   playPauseBtn: HTMLButtonElement | null;
   stopBtn: HTMLButtonElement | null;
@@ -155,7 +150,6 @@ export const state: ContentState = {
   currentPlayRequestId: 0,
   highlightedIndex: -1,
   isUserTyping: false,
-  isLightTheme: false,
   isMinimized: false,
   voicePanelToggle: null,
   voiceSearchClear: null,
@@ -173,15 +167,11 @@ export const state: ContentState = {
   header: null,
   closeBtn: null,
   minimizeBtn: null,
-  themeToggleBtn: null,
   voiceSearchInput: null,
   voiceDropdown: null,
   voiceLoadingIndicator: null,
   toggleCheckboxes: {},
   speedSelect: null,
-  languageSelect: null,
-  languageButton: null,
-  languageStrip: null,
   textContent: null,
   playPauseBtn: null,
   stopBtn: null,

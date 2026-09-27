@@ -74,7 +74,8 @@ src/background   src/popup     src/content
   `BackgroundResponse` 联合、`TtsProvider` / `PresetVoice` / `ExtensionSettings`。
   **契约面**，改动即冻结点（`AGENTS.md` §1.2）。
 - `constants.ts` — MiMo 端点 / 模型 / 预置音色表（`MIMO_PRESET_VOICES`）、
-  `TTS_PROVIDERS`、relay 存储键与超时（`RELAY_TTS_TIMEOUT_MS`）、音色缓存键、括号对表。
+  `TTS_PROVIDERS`、relay 存储键与超时（`RELAY_TTS_TIMEOUT_MS`）、音色缓存键、
+  界面主题存储键（`INTERFACE_THEME_STORAGE`）、括号对表。
 - `messaging.ts` — `sendToBackground` 泛型封装（返回 `Promise<T>`）；三入口统一消息出口。
 - `tts.ts` — `synthesizeSpeech`：经 background 代理 MiMo，`base64ToBlob` 解音频；
   含错误分类（`isRetryableTtsError`：只重试超时 / 网络 / 429 / 5xx，401 / 400 立即失败）。
@@ -96,7 +97,8 @@ src/background   src/popup     src/content
 - `language-names/` — 语言 / 国家 / 性别名翻译常量表（`index.ts` 聚合 5 个公共导出 +
   按语言的常量文件；供 i18n 显示用）。
 - `settings.ts` — 设置存储层：`persistSettings` / `readSettings`、provider 读写
-  （单一事实源）、开关键派生（chrome.storage 不可用时回退 localStorage）。
+  （单一事实源）、界面主题读写（`readInterfaceTheme` / `writeInterfaceTheme`，
+  主页标题栏切换、两层共用一份）、开关键派生（chrome.storage 不可用时回退 localStorage）。
 - `toggle-settings.ts` — 布尔开关统一声明表（`TOGGLE_SETTINGS`）：两层 UI 自动渲染、
   持久化键自动注册、`dependsOn` 从属联动、缺失按默认值兜底。**新增开关只改这一处**，
   另需在 `content/state.ts` / `popup/state.ts` 加同名布尔字段与各层业务读取点。
@@ -157,7 +159,8 @@ src/background   src/popup     src/content
 
 - `index.ts` — 入口：DOM 绑定、事件注册、初始化序列（API Key 状态 / 设置 / 音色加载）。「未配置」
   时初始化会提前 return，故 `setupEventListeners` 只放音色 / 语速等依赖配置的绑定；
-  与引擎无关的「中 / EN 语言切换」单独抽 `setupLanguageToggle`，由 `api-key-ui` 的
+  与引擎无关的「中 / EN 语言切换」单独抽 `setupLanguageToggle`，「主题切换」单独抽
+  `setupThemeToggle`（`popup/theme.ts`），都由 `api-key-ui` 的
   无条件初始化绑定，避免未配置时按钮无响应。
 - `state.ts` — popup 可变状态 + DOM 引用（`PopupState` 接口）。
 - `ui.ts` — 界面更新（按钮状态 / 提示 / 播放中禁用开关）。
@@ -166,7 +169,9 @@ src/background   src/popup     src/content
 - `config-ui.ts` — 统一配置面板：「配置 / 切换」入口 + 引擎分段切换（MiMo / 后端中转）
   + 各引擎配置表单 + 后端连通性自检。
 - `api-key-ui.ts` — MiMo API Key 配置界面（config-ui 内的 MiMo 表单）；并托管**不依赖引擎配置**
-  的 DOMContentLoaded 初始化（统一配置面板 / 悬浮窗开关 / 快捷操作 / 语言切换按钮）。
+  的 DOMContentLoaded 初始化（统一配置面板 / 悬浮窗开关 / 快捷操作 / 语言切换按钮 / 主题切换按钮）。
+- `theme.ts` — 标题栏主题切换（亮 / 暗）：写共享存储 `interfaceTheme`，已打开的悬浮窗
+  由 `content/storage-sync.ts` 的存储变更监听即时跟随（ADR 0006）。
 - `quick-actions.ts` — 「阅读整页 / 从剪贴板粘贴」快捷操作，经 background 转发到当前标签页
   （剪贴板在 popup 内读，借用户手势的 transient activation）。
 - `i18n.ts` — 界面语言与国旗图标。
@@ -185,13 +190,14 @@ src/background   src/popup     src/content
 
 - `index.ts` — `initWidget`：只做初始化编排（顺序为隐性契约：挂载 → 填充 state →
   绑定 → 加载）与模块级注册；初始化步骤拆到 `widget-init/`（dom-refs / auth-screen /
-  audio-player / theme / global-bridge / voice-search / language-select / controls），
+  audio-player / theme / global-bridge / voice-search / controls），
   background 消息监听在 `background-messages.ts`，网页点击跳转与划词监听在
-  `page-listeners.ts`。
+  `page-listeners.ts`，主页配置变更（界面语言 / 主题）的即时跟随在 `storage-sync.ts`。
 - `state.ts` — content 可变状态 + Shadow DOM 内的 DOM 引用（`ContentState` 接口，
   运行时由 `initWidget` 填充）；`localFallbackActive` 会话级容灾标志也在此。
 - `widget/` — 悬浮窗创建：`index.ts`（createWidget 幂等创建 + Shadow DOM 挂载 +
-  `getWidget()` / `getWidgetElementById()` + `setWidgetInitializer` 钩子注册点）/
+  `getWidget()` / `getWidgetElementById()` + `setWidgetInitializer` 钩子注册点；
+  创建时即按存储主题打好 `dark-theme` 类，避免挂载后主题闪烁）/
   `icons.ts`（SVG 图标精灵）/ `template.ts`（HTML 结构模板，i18n 插值）/
   `styles*.ts`（CSS：base / panel / controls / theme 四段 + `styles.ts` 顺序聚合器，
   **拼接顺序即级联顺序，不得随意调换段落顺序**）。
@@ -238,7 +244,11 @@ src/background   src/popup     src/content
 - `settings.ts` — 悬浮窗设置（调 shared 存储层 + 同步 Shadow DOM 内控件）。
 - `toggle-settings.ts` — 悬浮窗开关 checkbox 的数据驱动渲染与事件绑定（来自 shared 声明表）；
   额外副作用（如高亮主开关触发覆盖层重建）集中在 `TOGGLE_CHANGE_HANDLERS`。
-- `i18n.ts` — 界面语言与国旗（`language-names` 表）。
+- `i18n.ts` — 界面语言与国旗（`language-names` 表）；悬浮窗不再有语言切换入口，
+  主页切换后由 `storage-sync.ts` 调 `changeInterfaceLanguage` 重新应用。
+- `storage-sync.ts` — `chrome.storage.onChanged` 监听：主页改了界面语言（重载 i18n
+  并按新语言重派生默认音色）或主题（增删 `dark-theme` 类）时，已打开的悬浮窗即时跟随
+  （ADR 0006；悬浮窗不提供语言 / 主题切换入口，此处是唯一通道）。
 - `utils.ts` — 极薄转发层（同 popup）。
 - `log.ts` — 本层 logger 实例（按模块细化前缀）。
 
@@ -260,9 +270,10 @@ src/background   src/popup     src/content
 
 - `manifest.json` — MV3 清单（**版本号与 `package.json` 同步**；入口文件名是契约；
   `optional_host_permissions` 用于后端中转按 origin 运行时申请）。
-- `popup.html` + 7 个 `popup-*.css`（base / header / panels / buttons / config-panel /
-  voice-panel / status）— 主界面结构与样式，由 `popup.html` 顺序 `<link>` 引用；
-  **`<link>` 顺序即层叠顺序**，调整分区顺序会改变覆盖关系。
+- `popup.html` + 8 个 `popup-*.css`（base / header / panels / buttons / config-panel /
+  voice-panel / status / theme）— 主界面结构与样式，由 `popup.html` 顺序 `<link>` 引用；
+  **`<link>` 顺序即层叠顺序**，调整分区顺序会改变覆盖关系（theme 在最后，
+  `body.dark-theme` 前缀保证暗色覆盖优先级）。
 - `_locales/<lang>/messages.json` — **2 个语言文件（en / zh_CN），不要动**（i18n 键保持既有集合）。
 - `icons/` — 扩展图标。
 

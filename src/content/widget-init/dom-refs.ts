@@ -11,14 +11,10 @@ export function fillWidgetDomRefs(rootGetById: (id: string) => any): void {
   state.header = rootGetById('tts-widget-header');
   state.closeBtn = rootGetById('tts-widget-close');
   state.minimizeBtn = rootGetById('tts-widget-minimize');
-  state.themeToggleBtn = rootGetById('tts-widget-theme-toggle');
   state.voiceSearchInput = rootGetById('voice-search');
   state.voiceDropdown = rootGetById('voice-dropdown');
   state.voiceLoadingIndicator = rootGetById('voice-loading');
   state.speedSelect = rootGetById('speed-select');
-  state.languageSelect = rootGetById('language-select');
-  state.languageButton = rootGetById('language-button');
-  state.languageStrip = rootGetById('language-strip');
 
   state.textContent = rootGetById('text-content');
   state.playPauseBtn = rootGetById('play-pause-btn');

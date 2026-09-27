@@ -23,27 +23,10 @@ export function buildWidgetHTML(voicePanelCollapsed: boolean): string {
         <span class="header-app-name">WebReader</span>
       </div>
       <div class="header-right">
-        <div class="language-select-wrapper">
-          <button id="language-button" class="language-button" type="button" aria-haspopup="listbox" aria-expanded="false" title="Interface language">
-            <svg class="flag-icon" width="22" height="22">
-              <use href="#flag-en-square"></use>
-            </svg>
-          </button>
-          <!-- Native select kept for logic and accessibility -->
-          <select id="language-select" class="language-select-native" aria-hidden="true" tabindex="-1">
-            <option value="en">en</option>
-            <option value="zh_CN">zh</option>
-          </select>
-        </div>
         <div class="header-buttons">
           <button class="tts-widget-btn tts-widget-minimize" id="tts-widget-minimize" title="${i18n('minimize')}" type="button">
             <svg width="18" height="18" aria-hidden="true">
               <use href="#icon-minimize"></use>
-            </svg>
-          </button>
-          <button class="tts-widget-btn tts-widget-theme-toggle" id="tts-widget-theme-toggle" title="${i18n('toggle_theme')}" type="button">
-            <svg width="18" height="18" aria-hidden="true">
-              <use href="#icon-moon"></use>
             </svg>
           </button>
           <button class="tts-widget-btn tts-widget-close" id="tts-widget-close" title="${i18n('close')}" type="button">
@@ -64,22 +47,6 @@ export function buildWidgetHTML(voicePanelCollapsed: boolean): string {
         </button>
         <button id="user-logout-btn" type="button" class="user-menu-item">
           <span id="user-menu-logout-text">${i18n('sign_out') !== 'sign_out' ? i18n('sign_out') : 'Sign out'}</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Horizontal language strip (slides from top) -->
-    <div id="language-strip" class="language-strip">
-      <div class="language-strip-inner">
-        <button class="language-strip-flag" data-locale="en" type="button">
-          <svg class="flag-icon" width="22" height="22">
-            <use href="#flag-en-square"></use>
-          </svg>
-        </button>
-        <button class="language-strip-flag" data-locale="zh_CN" type="button">
-          <svg class="flag-icon" width="22" height="22">
-            <use href="#flag-cn-square"></use>
-          </svg>
         </button>
       </div>
     </div>

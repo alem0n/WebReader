@@ -149,6 +149,7 @@ async function initPlayerAfterKeySave(): Promise<void> {
 
 import { setupConfigUI, refreshRelayStatus } from './config-ui';
 import { setupQuickActions } from './quick-actions';
+import { setupThemeToggle } from './theme';
 
 // ---------- 网页悬浮窗开关 ----------
 
@@ -193,6 +194,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setupQuickActions();
   // 界面语言与引擎配置无关，必须在未配置时也可用（index.ts 未配置时会提前 return）
   setupLanguageToggle();
+  // 主题与引擎配置无关，切换后写入共享存储，已打开的悬浮窗即时跟随
+  void setupThemeToggle();
   // 后端配置回填与状态展示（不依赖 Key 是否配置）
   void refreshRelayStatus();
 });

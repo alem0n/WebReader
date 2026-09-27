@@ -4,7 +4,7 @@
  */
 import type { ExtensionSettings, TtsProvider } from './types';
 import { LOCAL_STORAGE_SETTINGS_KEY } from './types';
-import { DEFAULT_TTS_PROVIDER, TTS_PROVIDER_STORAGE } from './constants';
+import { DEFAULT_TTS_PROVIDER, INTERFACE_THEME_STORAGE, TTS_PROVIDER_STORAGE } from './constants';
 import { limitFloat } from './utils';
 import { TOGGLE_KEYS } from './toggle-settings';
 
@@ -68,7 +68,33 @@ export function setProvider(provider: TtsProvider): Promise<void> {
 }
 
 /**
- * 语速档位：0.5x–2.5x，步长 0.1（UI 动态生成 option 用）。
+ * 界面主题（亮 / 暗）：与界面语言同级，popup 主页与网页悬浮窗共用同一份。
+ *
+ * 主题切换只在 popup 主页标题栏（悬浮窗不再单独提供入口），写回后由各层
+ * 的存储变更监听即时应用，避免两层界面不一致。
+ */
+export function readInterfaceTheme(): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    if (typeof chrome === 'undefined' || !chrome.storage) {
+      resolve(localStorage.getItem(INTERFACE_THEME_STORAGE) === 'dark');
+      return;
+    }
+    chrome.storage.local.get(INTERFACE_THEME_STORAGE, (data) => {
+      resolve(!!(data && data[INTERFACE_THEME_STORAGE] === 'dark'));
+    });
+  });
+}
+
+/** 写入界面主题（dark=true 暗色，false 亮色） */
+export function writeInterfaceTheme(dark: boolean): void {
+  if (typeof chrome === 'undefined' || !chrome.storage) {
+    localStorage.setItem(INTERFACE_THEME_STORAGE, dark ? 'dark' : 'light');
+    return;
+  }
+  chrome.storage.local.set({ [INTERFACE_THEME_STORAGE]: dark ? 'dark' : 'light' });
+}
+
+/** 语速档位：0.5x–2.5x，步长 0.1（UI 动态生成 option 用）。
  * 各引擎对 0.1 步长的支持情况：本地 speechSynthesis（rate 连续 float）与
  * Edge 中转（百分比精确映射）完全支持；MiMo 为风格指令近似控制，小步长听感无差异。
  */

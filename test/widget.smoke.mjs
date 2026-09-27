@@ -117,11 +117,13 @@ await test('SVG 图标精灵已注入（UI 图标 + 国旗方块）', () => {
   assert.ok(root().querySelector('#icon-play'), '应有 icon-play');
   assert.ok(root().querySelector('#flag-en-square'), '应有 flag-en-square');
 });
-await test('头部 + 语言切换结构完整', () => {
+await test('头部结构完整（语言 / 主题切换已移至主页，头部只剩最小化 / 关闭）', () => {
   assert.ok(el('tts-widget-header'), '应有头部');
-  assert.ok(el('language-button'), '应有语言按钮');
-  assert.ok(el('language-select'), '应有原生语言下拉');
-  assert.ok(el('tts-widget-minimize') && el('tts-widget-theme-toggle') && el('tts-widget-close'), '应有最小化/主题/关闭按钮');
+  assert.ok(!el('language-button'), '语言按钮应已移除（语言由主页统一配置）');
+  assert.ok(!el('language-select'), '语言下拉应已移除');
+  assert.ok(!el('language-strip'), '语言条应已移除');
+  assert.ok(!el('tts-widget-theme-toggle'), '主题按钮应已移除（主题由主页统一配置）');
+  assert.ok(el('tts-widget-minimize') && el('tts-widget-close'), '应有最小化 / 关闭按钮');
 });
 await test('音色面板结构完整（搜索 + 语速 + 开关容器）', () => {
   assert.ok(el('voice-search'), '应有音色搜索框');
