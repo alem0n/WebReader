@@ -6,7 +6,8 @@
  *
  * 拆分见同目录各模块：selectors（选择器常量）/ site-rules（站点规则）/
  * skip-patterns（噪声过滤）/ pattern-match（通配符匹配）/ block-detection
- * （块级判定）/ addressable-text（可寻址文本）/ traversal（核心遍历）。
+ * （块级判定）/ addressable-text（可寻址文本）/ traversal（核心遍历）/
+ * translator-containers（第三方翻译器仅译文容器识别）。
  *
  * 输出约定：段落之间用 "\n\n" 连接——SentencePlayer.setText 只按 /\n\n+/
  * 识别段落边界（决定播放停顿与展示换行）。
@@ -18,6 +19,7 @@ import { isValidText } from './skip-patterns';
 import { hasTextNode, isBlockNode, matchesBlockSelector } from './block-detection';
 import { isVisibleUnit, readAddressableText } from './addressable-text';
 import { collectTargets } from './traversal';
+import { isKissTranslationOnlyWrapper } from './translator-containers';
 
 // 公共导出保持原文件形状不变（下游 player / sentence-map / reading-overlay / state 依赖）
 export { DEFAULT_SELECTOR, DEFAULT_IGNORE_SELECTOR } from './selectors';
@@ -115,6 +117,7 @@ export function collectPageUnits(options?: ExtractOptions): TextUnit[] {
         ignoreSelector,
         isBlock,
         hasText: hasTextNode,
+        isReadableContainer: isKissTranslationOnlyWrapper,
       },
       (unit) => {
         if (!isVisibleUnit(unit)) return;

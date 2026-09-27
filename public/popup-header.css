@@ -34,6 +34,8 @@
 }
 
 .app-nav {
+  /* 作为瞬态状态消息 absolute 定位的上下文 */
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -85,6 +87,12 @@
 }
 
 .widget-toggle-status {
+  /* 瞬态反馈脱离文档流：显隐不再挤压胶囊换行，避免语言切换等按钮位置漂移 */
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  max-width: 60%;
+  text-align: right;
   font-size: var(--text-caption);
   line-height: var(--leading-caption);
   color: var(--color-pencil-gray);

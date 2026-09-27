@@ -155,14 +155,18 @@ src/background   src/popup     src/content
 
 ### 3. `src/popup/`（主界面）
 
-- `index.ts` — 入口：DOM 绑定、事件注册、初始化序列（API Key 状态 / 设置 / 音色加载）。
+- `index.ts` — 入口：DOM 绑定、事件注册、初始化序列（API Key 状态 / 设置 / 音色加载）。「未配置」
+  时初始化会提前 return，故 `setupEventListeners` 只放音色 / 语速等依赖配置的绑定；
+  与引擎无关的「中 / EN 语言切换」单独抽 `setupLanguageToggle`，由 `api-key-ui` 的
+  无条件初始化绑定，避免未配置时按钮无响应。
 - `state.ts` — popup 可变状态 + DOM 引用（`PopupState` 接口）。
 - `ui.ts` — 界面更新（按钮状态 / 提示 / 播放中禁用开关）。
 - `voices.ts` — 音色加载 / 过滤 / 搜索 / 下拉 / 选择（目录随 provider 切换）。
 - `settings.ts` — `saveSettings` / `loadStoredSettings`（调 shared 存储层 + 同步本层 DOM）。
 - `config-ui.ts` — 统一配置面板：「配置 / 切换」入口 + 引擎分段切换（MiMo / 后端中转）
   + 各引擎配置表单 + 后端连通性自检。
-- `api-key-ui.ts` — MiMo API Key 配置界面（config-ui 内的 MiMo 表单）。
+- `api-key-ui.ts` — MiMo API Key 配置界面（config-ui 内的 MiMo 表单）；并托管**不依赖引擎配置**
+  的 DOMContentLoaded 初始化（统一配置面板 / 悬浮窗开关 / 快捷操作 / 语言切换按钮）。
 - `quick-actions.ts` — 「阅读整页 / 从剪贴板粘贴」快捷操作，经 background 转发到当前标签页
   （剪贴板在 popup 内读，借用户手势的 transient activation）。
 - `i18n.ts` — 界面语言与国旗图标。
@@ -219,9 +223,10 @@ src/background   src/popup     src/content
 - `page-fab.ts` — 页面内「朗读整页」悬浮按钮：可拖动 + 3 秒无点击自动吸附边缘，
   Shadow DOM 隔离，有可采集正文时才出现。
 - `extractor/` — 网页正文采集（selectors / site-rules / skip-patterns / pattern-match /
-  block-detection / addressable-text / traversal + `index.ts` 编排与再导出）；块级遍历
-  + 文本过滤，**只读不修改页面**；`collectPageUnits` 输出文档序、非重叠的段落单元
-  （元素 + 与 DOM 逐字对齐的「可寻址文本」）。
+  block-detection / addressable-text / traversal / translator-containers + `index.ts` 编排与再导出）；
+  块级遍历 + 文本过滤，**只读不修改页面**；`collectPageUnits` 输出文档序、非重叠的段落单元
+  （元素 + 与 DOM 逐字对齐的「可寻址文本」）；`translator-containers` 识别第三方翻译器
+  （kiss-translator）「仅译文」容器，使整页朗读在译文页上仍能采集到可见译文。
 - `sentence-map.ts` — 句子 → 段落单元 → **精确字符区间**映射（区间式分割，剔括号后可多段）；
   供逐句高亮与「点击跳转」反查。
 - `reading-overlay.ts` — 网页内逐句高亮的 DOM 覆盖层：把句子区间对应的文本节点包进透明

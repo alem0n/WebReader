@@ -13,6 +13,8 @@ export interface CollectOptions {
   ignoreSelector: string;
   isBlock: (el: Element) => boolean;
   hasText: (el: Element) => boolean;
+  /** 被忽略选择器命中、但仍是页面可见正文的节点（第三方翻译器的仅译文容器） */
+  isReadableContainer?: (el: Element) => boolean;
 }
 
 /**
@@ -28,7 +30,7 @@ export interface CollectOptions {
  * 采集是**只读**的：不注入或修改任何 DOM。
  */
 export function collectTargets(root: Node, options: CollectOptions, collect: (el: Element) => void): void {
-  const { autoScan, selector, ignoreSelector, isBlock, hasText } = options;
+  const { autoScan, selector, ignoreSelector, isBlock, hasText, isReadableContainer } = options;
   if (!root) return;
   if (root.nodeType !== 1 && root.nodeType !== 11) return; // ELEMENT_NODE / DOCUMENT_FRAGMENT
 
@@ -57,7 +59,9 @@ export function collectTargets(root: Node, options: CollectOptions, collect: (el
   const stack: Element[] = [rootEl];
   while (stack.length) {
     const node = stack.pop() as Element;
-    if (node.matches?.(ignoreSelector)) continue;
+    // 命中忽略选择器的节点整棵子树跳过，但第三方翻译器「仅译文」容器虽然带着
+    // .notranslate 等噪声标记，其内部却是页面唯一可见的正文（译文），需要放行
+    if (node.matches?.(ignoreSelector) && !isReadableContainer?.(node)) continue;
 
     const text = hasText(node);
 

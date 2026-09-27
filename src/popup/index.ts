@@ -177,17 +177,25 @@ export function setupEventListeners() {
     logger.debug('Speed changed to:', state.playbackSpeed);
     saveSettings();
   });
+}
 
-  // Language toggle button（中 / EN）
+/**
+ * 界面语言切换按钮（中 / EN）。
+ *
+ * 独立于引擎配置状态绑定：未配置 MiMo Key / 后端地址时 index.ts 的初始化会提前
+ * return，不会走到 setupEventListeners，但语言切换与引擎无关，必须始终可用
+ * （与悬浮窗开关 / 快捷操作 / 配置面板的无条件绑定保持一致）。
+ */
+export function setupLanguageToggle(): void {
   const languageToggleBtn = document.getElementById('language-toggle-btn');
-  if (languageToggleBtn) {
-    languageToggleBtn.addEventListener('click', async () => {
-      await toggleInterfaceLanguage();
-      // 未手选音色时，默认音色跟随界面语言重新派生（落实单一来源并同步搜索框 / 下拉选中态）
-      if (!state.voiceSelectionIsManual) {
-        ensureVoiceSelected();
-        filterVoices('');
-      }
-    });
-  }
+  if (!languageToggleBtn) return;
+
+  languageToggleBtn.addEventListener('click', async () => {
+    await toggleInterfaceLanguage();
+    // 未手选音色时，默认音色跟随界面语言重新派生（落实单一来源并同步搜索框 / 下拉选中态）
+    if (!state.voiceSelectionIsManual) {
+      ensureVoiceSelected();
+      filterVoices('');
+    }
+  });
 }
