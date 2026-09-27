@@ -15,6 +15,8 @@ WebReader 的**关键架构决策**记录在此（`AGENTS.md` §0 原则八要�
 | [0001](./0001-core-engineering-principles.md) | 确立核心工程原则为最高准则 | 采纳 | 2026-09-24 |
 | [0002](./0002-voice-default-from-interface-language.md) | 默认音色按界面语言派生，取消正文语言自动检测 | 采纳 | 2026-09-26 |
 | [0003](./0003-voice-provider-per-engine.md) | 音色提供方架构：每个引擎独立提供音色选项 | 采纳 | 2026-09-26 |
+| [0004](./0004-tts-relay-tray-ui-and-config-persistence.md) | tts-relay 增加托盘 UI 层与配置持久化 | 采纳 | 2026-09-27 |
+| [0005](./0005-tts-relay-single-executable-packaging.md) | tts-relay 打包为跨平台单文件可执行（Node SEA） | 采纳 | 2026-09-27 |
 
 > 历史决策（分层结构、provider 路由透明、开关声明表、逐句高亮不覆盖原文等）登记在
 > `AGENTS.md` §1.1 的决策日志表中；**此后新增的关键架构决策**在此编号建档，

@@ -126,6 +126,9 @@ esbuild.config.mjs  三入口构建（content / popup / background）+ public �
 | Web Audio API 播放音频 | 绕过页面 CSP 对 blob 媒体的拦截（`WebAudioPlayer`） |
 | 严格类型 strict 全项 + prettier | `noImplicitAny` / `strictNullChecks` / `useUnknownInCatchVariables` / `noUnusedLocals` / `noUnusedParameters`，`as any` 只允许用于确实无法收窄的 DOM 操作（如 `e.target`） |
 | `getWidget()` 返回 `HTMLElement \| null` | 悬浮窗可能尚未创建，类型必须体现可空；所有调用点据此判空或用可选链 |
+| **打包形态（Node SEA）单文件分发** | esbuild 打单文件 CJS + `node --build-sea`；托盘 Go 二进制不能进 JS 包，改由 SEA assets 内嵌、运行时释放到 systray2 缓存目录（`~/.cache/node-systray/<版本>/`）后以 `copyDir:true` 对接；版本号取自 `systray2/package.json` 不硬编码。打包态配置 / 日志取可执行文件同目录（`__dirname` 在 SEA 里是虚拟路径）。单平台构建，跨平台需分别在各平台执行。见 [ADR 0005](docs/adr/0005-tts-relay-single-executable-packaging.md) |
+| tts-relay 托盘 UI 层与配置持久化 | 桌面驻留形态：`systray2` 预编译二进制零本机编译（Electron 太重 / nut-js 需 node-gyp）；新增 `runtime/` 层收拢服务生命周期，`tray/` 只调它不直接碰 http；配置三级优先（环境变量显式 > `config.json` > 默认），托盘改动即落盘即生效；启动即后台化（脱离启动终端，关终端不中断，日志转 `tts-relay.log`）；
+  托盘不可用时自动回退无头模式。见 [ADR 0004](docs/adr/0004-tts-relay-tray-ui-and-config-persistence.md) |
 
 > 上表是本项目的**决策日志**（原则八）。**新增关键架构决策时，在 `docs/adr/` 补一条 ADR
 > 并在本表登记链接**；仅调整既有决策的实现细节则更新本表原因列即可。
@@ -157,6 +160,11 @@ esbuild.config.mjs  三入口构建（content / popup / background）+ public �
 - **manifest 契约**【对外】：`public/manifest.json` 引用的入口文件名
   （`content.js` / `popup.js` / `background.js`）与 `_locales` 目录结构；构建产物路径不可漂移
 - **功能约定**【对外】：无登录、三条语音链路、预置音色表 —— 面向用户的事实见 `README.md`
+- **tts-relay `config.json` 键名**【对外，等同数据迁移】：`RelayConfig` 的 camelCase 字段
+  （`port` / `host` / `relayAuthToken` / `edgeEndpoint` / `trustedClientToken` /
+  `chromiumVersion` / `outputFormat` / `maxConcurrency` / `maxPerClient` / `maxQueueSize` /
+  `voicesTtlMs` / `synthTimeoutMs`）是托盘菜单持久化到二进制所在目录的用户数据；
+  改键名必须提供迁移与回滚路径（旧文件读不出会静默回退默认，见 `config/store.ts`）
 
 ---
 
@@ -175,8 +183,10 @@ npm run format:check       # prettier 只检查（CI 用）
 npm run watch              # 监听重建
 
 # 后端中转服务（tts-relay/，独立 npm 项目，可选）
-npm run verify:relay           # typecheck + build + 单测
+npm run verify:relay           # typecheck + build + 单测（含打包产物端到端）
 npm --prefix tts-relay start    # 启动：node tts-relay/dist/index.js（默认 127.0.0.1:8787）
+# 打包为单文件可执行（Node SEA，需 Node 25.5+ 才能一步出可执行文件）
+npm --prefix tts-relay run pack # → tts-relay/dist-pack/tts-relay[.exe]，可拷到同平台机器双击运行
 
 # 扩展 + 后端一键验证
 npm run verify:all
@@ -193,11 +203,11 @@ npm run verify:all
 
 | 改动 | 必做 | 说明 |
 | --- | --- | --- |
-| 任意 `src/**` / `tts-relay/src/**` / `public/*.css` | `npm run verify`（后端用 `verify:relay`）+ **行数自检** | 单文件不得超过 500 行（原则 2）；新增文件先规划单一职责，接近 400 行主动拆分；改动已超限文件时把拆分纳入本分支或同步更新 `docs/tech-debt.md` |
+| 任意 `src/**` / `tts-relay/src/**` / `public/*.css` / `tts-relay/pack.mjs` | `npm run verify`（后端用 `verify:relay`）+ **行数自检** | 单文件不得超过 500 行（原则 2）；新增文件先规划单一职责，接近 400 行主动拆分；改动已超限文件时把拆分纳入本分支或同步更新 `docs/tech-debt.md` |
 | `src/shared/**` | `npm run verify` | shared 被三入口共同引用，任何改动都需全量构建确认不破坏其它入口 |
 | `src/background/**` | `npm run verify` | 消息路由 / provider / API 代理改动需核对 §1.2 契约与 `README.md` 功能约定 |
 | `src/popup/**` 或 `src/content/**` | `npm run verify` + **浏览器手动回归**（见下）+ 相关 `test/*.smoke.mjs` | 界面层无自动化测试，改动必须人工验证 |
-| `tts-relay/**` | `npm run verify:relay` | 独立项目，有自己的 typecheck / build / 单测 |
+| `tts-relay/**` | `npm run verify:relay`（改动 `pack.mjs` / `packaging/sea.ts` 后额外跑 `npm --prefix tts-relay run pack` 确认可打包，并跑 `node test/sea.e2e.cjs` 验产物） | 独立项目，有自己的 typecheck / build / 单测 |
 | `public/manifest.json` | `npm run build` + 手动核对 manifest 字段 | MV3 清单错误只在加载时报错，构建器不校验；`permissions` / `host_permissions` / `optional_host_permissions` / `content_scripts.matches` 变更需重点确认 |
 | `esbuild.config.mjs` / `tsconfig.json` | `npm run verify` | 构建配置改动需确认三入口产物大小与 public 复制完整 |
 | 文案 / i18n | `npm run build` + 手动看界面 | 新功能文案一律写死中文（§1.1），不要新增 `_locales` 键 |

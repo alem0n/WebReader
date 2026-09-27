@@ -29,7 +29,8 @@
 ```bash
 npm install
 npm run build      # tsc → dist/
-npm start          # 监听 http://127.0.0.1:8787
+npm start          # 托盘模式：驻留系统托盘，默认监听 http://127.0.0.1:8787
+npm run start:headless   # 无头模式（服务器 / 容器部署，行为与改造前一致）
 ```
 
 本地开发默认**不校验** Token（`RELAY_AUTH_TOKEN` 为空时放行）。生产部署务必设置：
@@ -47,6 +48,63 @@ MAX_QUEUE_SIZE=64            # 排队上限，超出即拒绝
 VOICES_TTL_MS=86400000       # 音色目录 TTL
 SYNTH_TIMEOUT_MS=60000       # 单段空闲超时（两帧之间最大间隔）
 ```
+
+## 打包为单文件可执行
+
+不想装 Node 的机器上，可以把 tts-relay 打成**单文件二进制**（Node SEA：可执行文件内含
+运行时与全部依赖，双击即用，无需本机编译工具链）：
+
+```bash
+npm install
+npm run pack    # → dist-pack/tts-relay[.exe]
+```
+
+产出物可直接拷到同平台的另一台机器运行（Windows 实测约 95MB）。
+
+- **托盘图标的底层二进制**（systray2 的预编译 Go 程序）在运行时被释放到
+  `~/.cache/node-systray/<systray2 版本>/`，首次启动写入一次，之后直接复用；
+- 打包后 `config.json` 与 `tts-relay.log` 仍在**可执行文件同目录**，可按「关于」菜单显示的路径找到；
+- **单平台构建**：SEA 产物只在构建平台上运行，跨平台需分别在 Windows / macOS / Linux 上执行
+  `npm run pack`（或准备各平台 node 二进制走 postject，见 ADR 0005）；
+- 打包出的二进制同样支持 `--headless` / `--foreground` 参数，行为与 node 形态一致。
+
+## 托盘模式（桌面驻留）
+
+`npm start`（或 `node dist/index.js`）默认进入托盘模式：**先把自己转入后台**（脱离启动它的
+终端），再驻留为系统托盘图标，**右键菜单**提供常用操作，改动持久化到**可执行文件同目录的
+`config.json`**：
+
+| 菜单项 | 作用 |
+| --- | --- |
+| 状态行 | 实时显示监听地址 / 未监听 / 启动失败原因；**点击复制监听地址**（仅监听时可用） |
+| 开启 / 关闭监听 | 立即启停 HTTP 服务（不退出进程） |
+| 监听地址 | 仅本机 `127.0.0.1` / 允许局域网 `0.0.0.0`，勾选即切 |
+| 监听端口 | 常用端口快捷项，勾选即切并持久化 |
+| Edge 端点 | `bing`（默认 / 权威）/ `msedgeservices`（备选） |
+| 在浏览器中打开 / 复制监听地址 | 仅监听时可用 |
+| 关于 | 版本、端点、上游音色数、配置文件路径 |
+| 重新加载配置 | 手改 `config.json` 后用它生效（无需重启进程） |
+| 退出 | 优雅关闭服务并退出 |
+
+**配置来源优先级**：环境变量（显式设置）> `config.json` > 内置默认值。
+
+- 托盘菜单的改动写入 `config.json`，并对当前会话立即生效（即使同名环境变量存在也以托盘为准，所见即所得）；
+- 显式设置的环境变量在**进程启动时**始终覆盖文件（服务器 / 容器部署的旧用法不变）；
+- 因此服务器 / 容器部署请用 `npm run start:headless`（`--headless` / `HEADLESS=1`），
+  该模式不创建托盘、不生成 `config.json`，完全由环境变量驱动；
+- 托盘不可用（无桌面、二进制缺失）时自动回退到无头模式，服务照常启动。
+
+> 端口快捷项只列了常用值。**任意端口**（及其余字段：鉴权 Token、并发上限、TTL、输出格式……）
+> 请按「关于」里显示的路径找到 `config.json` 手改，再点「重新加载配置」生效。
+
+**关闭终端不会退出程序**：托盘模式启动时会重新拉起一个脱离控制台的进程，随即退出当前
+终端里的进程（POSIX 下进入新会话，Windows 下位于新进程组），此后关闭终端、甚至退出
+当前 shell 都不影响运行。后台进程的输出写入与 `config.json` 同目录的 `tts-relay.log`
+（超过 2MB 时自动轮转一份 `.old`）。调试需要看实时输出时加 `--foreground` 保持前台：
+`npm start -- --foreground`。
+
+**日志**：所有关键事件（启动、配置与日志文件路径、每次托盘点击、监听启停、上游音色
+加载、未捕获异常）都带时间戳写入 `tts-relay.log`（与 `config.json` 同目录）。
 
 ## API
 
@@ -97,13 +155,21 @@ Content-Type: audio/mpeg
 
 ```
 src/
-  config/        环境变量（端点 / 并发 / 鉴权 / TTL 可切换）
+  config/        配置定义 / 默认值 / 归一化（index.ts）+ 文件持久化与优先级（store.ts）
   engines/edge/  Edge 引擎：令牌 / 文本预处理 / SSML / 帧编解码 / WSS 客户端 / 音色目录
   api/           HTTP 三个端点 + Bearer 鉴权 + 统一错误码
   queue/         per-client 并发上限 + 限流（自保）
-  index.ts       启动入口
+  runtime/       运行时：持有引擎 / 音色 / 队列 / HTTP 服务，start / stop / update / reload +
+                 托盘模式后台化（detach.ts：脱离启动终端、输出转日志文件）
+  tray/          托盘 UI：菜单构建（menu.ts）/ 点击派发（relay-tray.ts）/ 图标 / 桌面小操作
+  packaging/sea.ts   打包形态（Node SEA）胶水：托盘二进制释放 / 打包探测 / 应用目录解析
+  log.ts         文件日志（带时间戳，托盘后台运行时全靠它排障）
+  index.ts       启动入口：托盘模式（默认）/ 无头模式 + 不可用时回退
+pack.mjs        打包脚本（npm run pack）：esbuild 单文件 + node --build-sea → dist-pack/
+test/           单元测试（unit.js）/ 托盘与配置冒烟（tray.smoke.js）/ 打包产物端到端（sea.e2e.cjs）
 ```
 
 **部署形态**：无状态 + 可水平扩展。合成是「每段一条短连接」，进程内只需令牌的
 窗口级 TTL 缓存，**无需长连接池**。多副本 + 负载均衡即分布式；要更高可用，
-可让扩展配置多个地址做故障转移（v2）。
+可让扩展配置多个地址做故障转移（v2）。桌面驻留形态（托盘模式）是单实例的
+便利封装，服务端能力与无头模式完全相同。

@@ -279,6 +279,14 @@ src/background   src/popup     src/content
   `npm run verify:relay`，一键全量用 `npm run verify:all`；
 - 后端的端点 / 令牌常量变更**不需要扩展发版**（这正是中转架构的价值）；
 - 错误码映射改动必须同步 `shared/tts.ts` 的 `isRetryableTtsError` 与 `background/relay-tts.ts`。
+- 分层：`runtime/relay-runtime.ts` 拥有服务生命周期（start / stop / update / reload），
+  `tray/` 只经它驱动，不直接调 `api/http`（`createRelayServer` 只装配处理器，listen 归运行时）；
+  配置入口是 `config/`（三级优先：环境变量显式 > `config.json` > 默认），见 ADR 0004。
+- 打包形态（`pack.mjs` + `packaging/sea.ts`，ADR 0005）：esbuild 打单文件 CJS 后
+  `node --build-sea`；托盘 Go 二进制不是 JS，以 SEA assets 内嵌、运行时释放到
+  `~/.cache/node-systray/<systray2 版本>/`（**版本号取 `systray2/package.json`，不硬编码**）
+  再以 `copyDir:true` 对接 systray2。打包态 `resolveAppDir()` 取可执行文件同目录——
+  `__dirname` 在 SEA 里是虚拟路径，不能用来定位 `config.json` / 日志。
 
 ---
 

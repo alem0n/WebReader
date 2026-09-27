@@ -2,9 +2,9 @@
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "128": "icons/icon128.png",
       "16": "icons/icon16.png",
-      "48": "icons/icon48.png"
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
     }
   },
   "background": {
@@ -12,23 +12,36 @@
   },
   "content_scripts": [
     {
-      "js": ["content.js"],
-      "matches": ["\u003Call_urls>"],
+      "js": [
+        "content.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ],
       "run_at": "document_end"
     }
   ],
   "default_locale": "en",
   "description": "__MSG_greeting__",
-  "host_permissions": ["https://api.xiaomimimo.com/*"],
-  "optional_host_permissions": ["http://*/*", "https://*/*"],
+  "host_permissions": [
+    "https://api.xiaomimimo.com/*"
+  ],
+  "optional_host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
   "icons": {
-    "128": "icons/icon128.png",
     "16": "icons/icon16.png",
-    "48": "icons/icon48.png"
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   },
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAs9kOhjAvDtxk2QKXaB9hqDRaRqQT/A+eVDqoOJ3D0vTCPx98dSBGZ7aaMiMxHmQ2hdh+2hSOzJD280kUoQ/4DxBMQe5RSewPUGwJ2SWHr+ews9Wy573vQAhgwN7DNX/2cC0wVd55f9Y7eb6QGUoRg9FIErlQJenlb5R4LkuQnSCHse3kRQQnoXRMBxoe38XGOjZVh9ODR7IKXIwiRDGHigrLDhXEMvR+mr73fUzkX8k6jvzmR8cLIzfBya6rOeW8SgCJ478aX5goneCfx18mvDOYEVx8mMMO/Ug7hhvEuTAE9/ZpFMQxQU+makcAbVkTmLcCeDMGhqiv1AYJ2O9kmwIDAQAB",
   "manifest_version": 3,
   "name": "__MSG_app_name__",
-  "permissions": ["storage", "activeTab", "contextMenus"],
-  "version": "0.11.1"
+  "permissions": [
+    "storage",
+    "activeTab",
+    "contextMenus"
+  ],
+  "version": "0.13.0"
 }

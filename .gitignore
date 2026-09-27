@@ -21,6 +21,9 @@ Thumbs.db
 *.crx
 *.pem
 
+# tts-relay 运行时配置（托盘菜单改动落盘，属用户数据，不入库）
+tts-relay/config.json
+
 # 测试运行时由 esbuild 现场生成的 bundle（冒烟测试用，不入库）
 test/.*.bundle.mjs
 
