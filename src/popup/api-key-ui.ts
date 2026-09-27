@@ -4,7 +4,7 @@ import { sendToBackground } from '../shared/messaging';
 import type { ApiKeyStatusResponse, SaveApiKeyResponse, ToggleWidgetResponse } from '../shared/types';
 import { loadStoredSettings } from './settings';
 import { loadVoices } from './voices';
-import { setupEventListeners } from './index';
+import { setupEventListeners, setupLanguageToggle } from './index';
 import { sleep } from './utils';
 import { logger } from './log';
 import { setConfigPanelOpen } from './config-ui';
@@ -191,6 +191,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setupConfigUI();
   setupWidgetToggleUI();
   setupQuickActions();
+  // 界面语言与引擎配置无关，必须在未配置时也可用（index.ts 未配置时会提前 return）
+  setupLanguageToggle();
   // 后端配置回填与状态展示（不依赖 Key 是否配置）
   void refreshRelayStatus();
 });
