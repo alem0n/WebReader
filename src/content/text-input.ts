@@ -1,7 +1,7 @@
 /** text-input (migrated from content.js) */
 import { state } from './state';
 import { createWidget, getWidget, getWidgetElementById } from './widget';
-import { highlightFirstSentenceIfNeeded } from './ui';
+import { highlightFirstSentenceIfNeeded, updatePlayButtonState } from './ui';
 import { createContentLogger } from './log';
 
 const logger = createContentLogger('text-input');
@@ -74,6 +74,8 @@ export function addTextToTextareaAndPlay(text: string) {
 
       // Replace text in content div (overwrite existing text)
       state.textContent.textContent = text;
+      // 重算播放按钮启用态：清除后按钮因 hasText=false 仍被禁用，不刷新则自动点击被跳过
+      updatePlayButtonState();
 
       logger.debug('Text set:', text.substring(0, 50) + '...');
       logger.debug('textContent.textContent:', state.textContent.textContent.substring(0, 50));
@@ -135,6 +137,8 @@ export function playSelectedText(text: string) {
     if (state.textContent && state.playPauseBtn) {
       // Set text
       state.textContent.textContent = text;
+      // 重算播放按钮启用态：清除后按钮因 hasText=false 仍被禁用，不刷新则自动点击被跳过
+      updatePlayButtonState();
 
       logger.debug('Text set:', text.substring(0, 50) + '...');
 
