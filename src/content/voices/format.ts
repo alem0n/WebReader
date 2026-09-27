@@ -5,7 +5,7 @@
  * 下拉 UI 无关的纯转换单独成模块，loader 与 dropdown 都复用它，避免格式化逻辑
  * 在两处重复漂移。
  */
-import { getFlagIdForLocale, getTranslatedCountry, getTranslatedGender, getTranslatedLanguageName } from '../i18n';
+import { getFlagIdForLocale, getTranslatedCountry, getTranslatedLanguageName } from '../i18n';
 import { languageNames } from '../../shared/language-names';
 import type { PresetVoice } from '../../shared/types';
 
@@ -61,29 +61,4 @@ export function formatVoiceName(voice: PresetVoice) {
   }
 
   return result;
-}
-
-export function formatVoiceDisplayName(voice: PresetVoice) {
-  if (!voice) return '';
-
-  // Extract short name from full name (e.g., "en-AU-WilliamMultilingualNeural" -> "William")
-  const nameParts = voice.name.split('-');
-  let shortName = nameParts.length > 2 ? nameParts[2] : voice.name;
-
-  // Remove "Multilingual", "Neural" suffixes
-  shortName = shortName.replace(/Multilingual|Neural/g, '').trim();
-
-  // Get language name (e.g., "en-AU" -> "English (Australia)")
-  const langName = voice.language || '';
-
-  // Format: "Language - Name (Gender)"
-  let display = langName;
-  if (shortName) {
-    display += display ? ` - ${shortName}` : shortName;
-  }
-  if (voice.gender) {
-    display += ` (${getTranslatedGender(voice.gender)})`;
-  }
-
-  return display || voice.name; // Fallback to technical name
 }

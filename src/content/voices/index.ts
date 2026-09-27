@@ -8,6 +8,6 @@
  *
  * 本文件只做聚合再导出，保持 '../voices' 的对外契约不变。
  */
-export { formatVoiceName, formatVoiceDisplayName } from './format';
+export { formatVoiceName } from './format';
 export { clearVoicesCache, loadVoices } from './loader';
 export { filterVoices, renderVoiceDropdown, selectVoice, updateHighlightedOption } from './dropdown';

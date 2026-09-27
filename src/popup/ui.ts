@@ -1,21 +1,5 @@
-/** UI state: status text, loading/error feedback. 播放控制已随播放器界面移除。 */
-import { state, statusText, errorMessage } from './state';
-import { i18n } from './i18n';
-
-// Update status text (always in the same place, replaces loading text)
-export function updateStatusText(text: string) {
-  if (statusText) {
-    statusText.textContent = text || i18n('ready');
-  }
-}
-
-// Show/hide loading indicator (uses status-text, no separate element)
-export function showLoading(show: any, message: any = null) {
-  state.isLoading = show;
-  if (show) {
-    updateStatusText(message || i18n('loading_voices'));
-  }
-}
+/** UI state: error feedback. 加载/状态文本反馈由 quick-actions 直操 status-text，本模块只留错误反馈。 */
+import { errorMessage } from './state';
 
 // Show error message
 export function showError(message: any) {
