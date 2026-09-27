@@ -21,7 +21,6 @@
   width: 40px;
   height: 40px;
   border-radius: var(--radius);
-  border: 2px solid var(--color-night-ink);
   flex-shrink: 0;
   object-fit: contain;
 }
@@ -94,16 +93,10 @@
   fill: currentColor;
 }
 
-/* 仅图标的胶囊：方形内边距，与同行文案胶囊等高 */
+/* 仅图标的胶囊：方形内边距，标题栏三个按钮等高等宽 */
 .nav-pill--icon {
   padding: 8px;
   line-height: 0;
-}
-
-/* 标题栏内的胶囊：收紧尺寸与品牌同行，避免 400px 弹窗里挤压换行 */
-.nav-pill--compact {
-  padding: 8px 10px;
-  font-size: var(--text-caption);
 }
 
 /* 引擎配置入口：蓝色强调（Outlined Account Button 语义） */

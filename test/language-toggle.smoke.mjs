@@ -1,7 +1,7 @@
 /**
  * popup 界面语言切换回归（jsdom）
  *
- * 守护「主页中 / EN 切换按钮在引擎未配置时也能正常切换」，以及瞬态状态消息
+ * 守护「主页语言切换按钮在引擎未配置时也能正常切换」，以及瞬态状态消息
  * 不再挤压导航胶囊换行（语言按钮位置漂移）。
  *
  * 修复前：index.ts 的初始化在未配置（无 MiMo Key / 无后端地址）时提前 return，
@@ -127,7 +127,8 @@ async function test(name, fn) {
 }
 
 const byId = (id) => document.getElementById(id);
-const label = () => byId('language-toggle-label').textContent;
+// 语言按钮现为单个字符图形（仅图标模式），显示「将要切到的目标语言」，断言查 use 的 href
+const langIcon = () => byId('language-toggle-btn').querySelector('use').getAttribute('href');
 
 console.log('\n[未配置状态：初始化提前 return 的分支]');
 
@@ -137,24 +138,31 @@ await test('未配置时配置面板展开（确认处在未配置分支）', ()
   assert.ok(!panel.classList.contains('hidden'), '未配置时应展开引导');
 });
 
-await test('初始界面语言为 en 时按钮显示「中文」', () => {
-  assert.strictEqual(label(), '中文', `实际：${label()}`);
+await test('语言按钮为单字符图形（仅图标模式）', () => {
+  assert.ok(['#icon-lang-zh', '#icon-lang-en'].includes(langIcon()), '应引用语言字符图形符号');
+});
+
+await test('初始界面语言为 en 时按钮显示目标语言「中」', () => {
+  assert.strictEqual(document.documentElement.lang, 'en', '文档语言应跟随界面语言');
+  assert.strictEqual(langIcon(), '#icon-lang-zh', 'en 时应显中（点击将切到中文）');
 });
 
 await test('未配置时点击语言按钮能切换（核心回归点）', async () => {
   byId('language-toggle-btn').click();
   await tick();
   await tick();
-  assert.strictEqual(label(), 'EN', `切换后应显示 EN，实际：${label()}`);
   assert.strictEqual(store.interfaceLanguage, 'zh_CN', '应已持久化 zh_CN');
+  assert.strictEqual(document.documentElement.lang, 'zh_CN');
+  assert.strictEqual(langIcon(), '#icon-lang-en', 'zh_CN 时应显 EN（点击将切到英文）');
 });
 
 await test('再点一次切回英文', async () => {
   byId('language-toggle-btn').click();
   await tick();
   await tick();
-  assert.strictEqual(label(), '中文', `切回后应显示中文，实际：${label()}`);
   assert.strictEqual(store.interfaceLanguage, 'en');
+  assert.strictEqual(document.documentElement.lang, 'en');
+  assert.strictEqual(langIcon(), '#icon-lang-zh', '切回 en 后应显中');
 });
 
 console.log('\n[布局：瞬态状态消息脱离文档流]');

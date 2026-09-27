@@ -10,10 +10,6 @@ body.dark-theme {
 }
 
 /* 品牌与标题栏胶囊 */
-body.dark-theme .app-brand-icon {
-  border-color: rgba(255, 255, 255, 0.55);
-}
-
 body.dark-theme .app-brand-name {
   color: var(--color-fresh-leaf);
 }

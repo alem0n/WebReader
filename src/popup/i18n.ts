@@ -131,20 +131,20 @@ export function applyInterfaceLanguage(locale: string): void {
     voicePanelToggle.title = i18n(collapsed ? 'expand' : 'minimize');
   }
 
-  updateLanguageToggleLabel();
+  updateLanguageToggleIcon();
 }
 
-// 中 / EN 双语切换按钮文案：显示「将要切换到的语言」
-function updateLanguageToggleLabel(): void {
-  const label = document.getElementById('language-toggle-label');
-  if (!label) return;
-  // 当前中文 → 显示可切到的英文；当前英文（或其它） → 显示可切到的中文
-  label.textContent = state.interfaceLanguage === 'zh_CN' ? 'EN' : '中文';
+// 中 / EN 双语切换按钮图标：与主题按钮同构，只显示一个字符图形——「将要切到的目标语言」
+// （当前中文 → 显 EN；当前英文或其它 → 显中），点击即切到该语言
+function updateLanguageToggleIcon(): void {
+  const useEl = document.querySelector('#language-toggle-icon');
+  if (!useEl) return;
+  const next = state.interfaceLanguage === 'zh_CN' ? '#icon-lang-en' : '#icon-lang-zh';
+  useEl.setAttribute('href', next);
 }
 
-// 点击切换按钮：中文 ⇄ 英文
+// 点击切换按钮：中文 ⇄ 英文（按钮本身为「中」「EN」双字符图标，始终象征两种语言，无需随切换更新）
 export async function toggleInterfaceLanguage(): Promise<void> {
   const next = state.interfaceLanguage === 'zh_CN' ? 'en' : 'zh_CN';
   await changeInterfaceLanguage(next);
-  updateLanguageToggleLabel();
 }
