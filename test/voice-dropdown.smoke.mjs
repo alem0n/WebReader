@@ -1,13 +1,16 @@
 /**
  * popup 音色下拉备选列表回归（jsdom）
  *
- * 守护「主页音色搜索框聚焦 / 点击时下拉展示完整备选列表」。
+ * 守护「主页音色搜索框聚焦 / 点击时下拉展示默认备选列表」。
  *
  * 修复前：focus / click 处理器拿 voiceSearchInput.value 当搜索词调 filterVoices，
  * 但输入框里显示的是「已选音色的显示名」（默认派生为 "en-US - Mia"，恢复手选时为
  * 原始名），而 filterVoices 只按 name / language / gender 匹配 —— 按显示名过滤得到
  * 0 条（下拉看不到任何备选），按原始名过滤得到 1 条（只能选到当前音色本身）。
- * 修复后聚焦 / 点击一律 filterVoices('') 展示全部备选，只有用户键入的文本才过滤。
+ *
+ * 语言范围视图（本文件所测）：聚焦 / 点击改为按已选音色的语言收窄默认视图，
+ * 与 content 侧对齐。大目录（Edge）下全量铺开会让 zh-* 落到 100 条截断之外，
+ * 见 voice-dropdown-large.smoke.mjs。只有用户键入的文本才走全量搜索。
  *
  * 运行：node test/voice-dropdown.smoke.mjs
  */
@@ -139,18 +142,19 @@ await test('加载后下拉默认收起', () => {
   assert.strictEqual(dropdownVisible(), false, '未交互前下拉应隐藏');
 });
 
-await test('聚焦搜索框展开下拉且列出全部备选（核心回归点）', () => {
+await test('聚焦搜索框展开下拉，默认按已选音色语言展示（核心回归点）', () => {
   byId('voice-search').dispatchEvent(new window.FocusEvent('focus'));
   assert.strictEqual(dropdownVisible(), true, '聚焦后下拉应展开');
-  assert.strictEqual(optionCount(), 9, '应展示全部 9 个备选音色，而不是被输入框显示名过滤掉');
+  // 语言范围视图：英文界面默认选 en-US 音色，默认视图收窄到 4 个英文备选
+  assert.strictEqual(optionCount(), 4, '应展示同语言备选，而不是被输入框显示名过滤掉');
 });
 
-await test('收起后点击搜索框仍展开全部备选', () => {
+await test('收起后点击搜索框仍展示同语言备选', () => {
   document.body.click(); // 点击外部收起
   assert.strictEqual(dropdownVisible(), false, '点击外部应收起');
   byId('voice-search').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   assert.strictEqual(dropdownVisible(), true, '点击后下拉应展开');
-  assert.strictEqual(optionCount(), 9, '点击同样应展示全部 9 个备选');
+  assert.strictEqual(optionCount(), 4, '点击同样应展示同语言备选');
 });
 
 await test('用户真正键入时按输入文本过滤', () => {
@@ -194,23 +198,38 @@ await test('英文界面用 Chinese / English 也能过滤（双向兼容）', (
   input.dispatchEvent(new window.Event('input', { bubbles: true }));
 });
 
-await test('键入后重新聚焦回到完整备选列表', () => {
+await test('键入后重新聚焦回到默认（同语言）视图', () => {
   const input = byId('voice-search');
-  input.value = 'en';
+  input.value = 'zh';
   input.dispatchEvent(new window.Event('input', { bubbles: true }));
-  assert.strictEqual(optionCount(), 4, '键入 en 应过滤出 4 个英文音色');
+  assert.strictEqual(optionCount(), 5, '键入 zh 应过滤出 5 个中文音色');
+  // 重新聚焦回到默认视图：已选音色是英文，收窄到英文（4 条），不再停留在键入的过滤结果
   input.dispatchEvent(new window.FocusEvent('focus'));
-  assert.strictEqual(optionCount(), 9, '重新聚焦应回到完整备选列表');
+  assert.strictEqual(optionCount(), 4, '重新聚焦应回到已选音色（英文）的同语言视图');
 });
 
-await test('点选某个音色后下拉收起，再次聚焦仍展示全部备选', () => {
+await test('点选某个音色后下拉收起，再次聚焦展示该音色同语言备选', () => {
   const dropdown = byId('voice-dropdown');
   const first = dropdown.querySelector('.voice-option');
   first.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   assert.strictEqual(dropdownVisible(), false, '选中后下拉应收起');
   assert.ok(byId('voice-search').value, '选中后搜索框应有已选音色显示名');
   byId('voice-search').dispatchEvent(new window.FocusEvent('focus'));
-  assert.strictEqual(optionCount(), 9, '已选状态下再次聚焦仍应展示全部备选');
+  assert.strictEqual(optionCount(), 4, '已选状态下再次聚焦仍展示同语言备选');
+});
+
+await test('选中中文音色后，聚焦展示中文备选（语言范围视图）', () => {
+  const input = byId('voice-search');
+  // 键入「中文」搜出并选中一条中文音色（全量搜索不受语言范围限制）
+  input.value = '中文';
+  input.dispatchEvent(new window.Event('input', { bubbles: true }));
+  assert.strictEqual(optionCount(), 5, '键入「中文」应过滤出 5 个中文音色');
+  const dropdown = byId('voice-dropdown');
+  dropdown.querySelector('.voice-option').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  assert.strictEqual(dropdownVisible(), false, '选中后下拉应收起');
+  // 再次聚焦：默认视图收窄到已选音色（中文）的语言
+  input.dispatchEvent(new window.FocusEvent('focus'));
+  assert.strictEqual(optionCount(), 5, '已选中文音色时聚焦应展示 5 个中文备选');
 });
 
 // ---------------------------------------------------------------------------
