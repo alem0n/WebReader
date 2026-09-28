@@ -95,20 +95,41 @@ export async function loadVoices(options: { attempt?: number; authStage?: string
   }
 }
 
-// Filter voices based on search term
-export function filterVoices(searchTerm: string): void {
+/**
+ * 过滤音色列表并重渲染下拉。
+ *
+ * filterByLanguage=true 是聚焦 / 点击搜索框时的默认视图：空搜索词下只展示与
+ * 当前已选音色同语言的备选。后端中转（Edge）目录有几百个音色，若默认全量铺开，
+ * 按名排序后 zh-* 会落在 renderVoiceDropdown 的 100 条截断之外而不可见
+ * （「中文界面找不到中文音色」）；收窄到当前语言才能看到同类备选，行为与
+ * content/voices/dropdown.ts 对齐。用户键入的文本始终走全量搜索。
+ *
+ * @param searchTerm 用户键入的搜索词（空展示默认视图）
+ * @param filterByLanguage 默认视图是否按已选音色的语言收窄
+ */
+export function filterVoices(searchTerm: string, filterByLanguage = false): void {
   const term = searchTerm.toLowerCase().trim();
 
-  if (!term) {
-    // If no search term, show all voices
+  // 无搜索词且按语言过滤：收窄到已选音色的主语言（zh-CN → zh）
+  const voiceForLanguage = filterByLanguage ? state.selectedVoice : null;
+  if (!term && voiceForLanguage && voiceForLanguage.language) {
+    const selectedLanguage = voiceForLanguage.language.split('-')[0];
+    state.filteredVoices = state.allVoices.filter((voice) => voice.language && voice.language.startsWith(selectedLanguage));
+  } else if (!term) {
+    // 无搜索词且不按语言过滤：展示全部
     state.filteredVoices = [...state.allVoices];
   } else {
     // 引擎无关过滤：名称 / 语言代码 / 语言名（中英）/ 国家名 / 性别皆可命中
     state.filteredVoices = state.allVoices.filter((voice) => matchVoiceSearchTerm(voice, term));
   }
 
-  // Sort filtered voices
+  // 按语言优先排序，再按音色名：同语言音色聚在一起，与 content 侧一致
   state.filteredVoices.sort((a, b) => {
+    const langA = a.language || '';
+    const langB = b.language || '';
+    if (langA !== langB) {
+      return langA.localeCompare(langB);
+    }
     if (a.name < b.name) return -1;
     if (a.name > b.name) return 1;
     return 0;
