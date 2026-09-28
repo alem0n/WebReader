@@ -1,6 +1,6 @@
 {
   "name": "webreader",
-  "version": "0.14.4",
+  "version": "0.14.5",
   "description": "WebReader 浏览器扩展（TypeScript 多文件重构版，文本转语音 / 屏幕阅读器）",
   "private": true,
   "scripts": {

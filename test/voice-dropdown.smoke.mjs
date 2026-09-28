@@ -162,6 +162,38 @@ await test('用户真正键入时按输入文本过滤', () => {
   input.dispatchEvent(new window.Event('input', { bubbles: true }));
 });
 
+await test('搜「中文」过滤出中文音色（核心回归点）', () => {
+  const input = byId('voice-search');
+  input.value = '中文';
+  input.dispatchEvent(new window.Event('input', { bubbles: true }));
+  assert.strictEqual(optionCount(), 5, '中文应命中 5 个 zh-CN 音色');
+  input.value = '';
+  input.dispatchEvent(new window.Event('input', { bubbles: true }));
+});
+
+await test('搜「英文 / 英语」过滤出英文音色（同理）', () => {
+  const input = byId('voice-search');
+  for (const q of ['英文', '英语']) {
+    input.value = q;
+    input.dispatchEvent(new window.Event('input', { bubbles: true }));
+    assert.strictEqual(optionCount(), 4, `键入 ${q} 应过滤出 4 个英文音色`);
+  }
+  input.value = '';
+  input.dispatchEvent(new window.Event('input', { bubbles: true }));
+});
+
+await test('英文界面用 Chinese / English 也能过滤（双向兼容）', () => {
+  const input = byId('voice-search');
+  input.value = 'Chinese';
+  input.dispatchEvent(new window.Event('input', { bubbles: true }));
+  assert.strictEqual(optionCount(), 5, 'Chinese 应命中 5 个中文音色');
+  input.value = 'English';
+  input.dispatchEvent(new window.Event('input', { bubbles: true }));
+  assert.strictEqual(optionCount(), 4, 'English 应命中 4 个英文音色');
+  input.value = '';
+  input.dispatchEvent(new window.Event('input', { bubbles: true }));
+});
+
 await test('键入后重新聚焦回到完整备选列表', () => {
   const input = byId('voice-search');
   input.value = 'en';
