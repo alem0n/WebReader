@@ -3,18 +3,13 @@ import { state, voiceSearchInput, voiceDropdown, voiceLoadingIndicator, speedSel
 import type { PresetVoice } from '../shared/types';
 import { pickDefaultVoice } from '../shared/voice-default';
 import { resolveRestoredVoice } from '../shared/voice-restore';
-// 只引英文基准表与中文表：popup 只需让用户用中 / 英语言名搜索，引聚合 index 会把
-// 全部 18 个语言文件打进 popup 包（AGENTS.md §0 原则 7：依赖核查，按需引入）
-import { languageNames } from '../shared/language-names/language-names-en';
-import { languageNameZh } from '../shared/language-names/zh';
+// 音色过滤是引擎无关的纯领域逻辑，下沉 shared 由 popup / content 共用一份
+import { matchVoiceSearchTerm } from '../shared/voice-search';
 import { loadSettings, saveSettings, syncSpeedSelectFromStored } from './settings';
 import { hideError, showError } from './ui';
 import { i18n } from './i18n';
 import { sendToBackground } from '../shared/messaging';
 import { logger } from './log';
-
-// 显式索引类型：语言名键是动态字符串，字面量对象类型无索引签名，需收窄才能查表
-const ZH_LANGUAGE_NAMES: Record<string, string> = languageNameZh;
 
 // 旧服务器配置残留（已移除，仅错误日志保留占位）
 const API_URL: string = '';
@@ -100,53 +95,6 @@ export async function loadVoices(options: { attempt?: number; authStage?: string
   }
 }
 
-/**
- * 语言搜索别名：MiMo 只有中 / 英两档音色，翻译表用「中文 / 英语」，
- * 但「英文」是中文用户对英语的通称，补此别名让常用搜索词也能命中。
- */
-const LANGUAGE_SEARCH_ALIASES: Record<string, string[]> = {
-  English: ['英文'],
-};
-
-/**
- * 语言代码 → 英文语言名（如 zh-CN → Chinese），取首个前缀匹配项。
- *
- * 与 content/voices/format.ts 的查表方式一致（locale.startsWith(code)）；
- * 纯函数，不持有层状态。
- */
-function resolveLanguageEnglishName(locale: string): string {
-  if (!locale) return '';
-  for (const [code, name] of Object.entries(languageNames)) {
-    if (locale.startsWith(code)) return name;
-  }
-  return '';
-}
-
-/**
- * 构建音色的可搜索文本：音色名 + 语言代码 + 语言名（英文基准 / 中文 / 别名）+ 性别。
- *
- * 只按 name / language(BCP-47 代码) / gender 匹配时，搜「中文」「英文」「Chinese」
- * 命中不了任何 MiMo 音色（name 是「冰糖」「Mia」，language 是 zh-CN / en-US），
- * 过滤结果恒为空。把语言名一并纳入匹配，搜索词才与用户心智对齐。
- * 中 / 英语言名无论当前界面语言都纳入：MiMo 音色只有这两档，用户用哪种语言
- * 搜索都应当命中对应音色（双向兼容中 / 英界面）。
- */
-function buildVoiceSearchText(voice: PresetVoice): string {
-  const parts: string[] = [voice.name || '', voice.voice || '', voice.language || '', voice.gender || ''];
-  // 语言代码拆段（zh-CN → zh / CN），方便只输 zh / en
-  if (voice.language) parts.push(...voice.language.split('-'));
-
-  const englishName = resolveLanguageEnglishName(voice.language);
-  if (englishName) {
-    parts.push(englishName); // Chinese / English
-    const zhName = ZH_LANGUAGE_NAMES[englishName];
-    if (zhName) parts.push(zhName); // 中文 / 英语
-    for (const alias of LANGUAGE_SEARCH_ALIASES[englishName] || []) parts.push(alias); // 英文
-  }
-
-  return parts.filter(Boolean).join(' ').toLowerCase();
-}
-
 // Filter voices based on search term
 export function filterVoices(searchTerm: string): void {
   const term = searchTerm.toLowerCase().trim();
@@ -155,8 +103,8 @@ export function filterVoices(searchTerm: string): void {
     // If no search term, show all voices
     state.filteredVoices = [...state.allVoices];
   } else {
-    // Filter voices by search term: 名称 / 语言代码 / 语言名（中英）/ 性别皆可命中
-    state.filteredVoices = state.allVoices.filter((voice) => buildVoiceSearchText(voice).includes(term));
+    // 引擎无关过滤：名称 / 语言代码 / 语言名（中英）/ 国家名 / 性别皆可命中
+    state.filteredVoices = state.allVoices.filter((voice) => matchVoiceSearchTerm(voice, term));
   }
 
   // Sort filtered voices
