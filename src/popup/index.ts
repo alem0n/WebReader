@@ -129,26 +129,30 @@ export function setupEventListeners() {
   });
 
   /**
-   * 聚焦 / 点击音色搜索框时展示完整备选列表。
+   * 聚焦 / 点击音色搜索框时展示默认备选列表。
    *
    * 不能拿 voiceSearchInput.value 当搜索词：输入框里显示的是「已选音色的显示名」
    * （默认派生时为 "zh-CN - MiMo-默认"，恢复手选时为原始名 "MiMo-默认"），而
    * filterVoices 只按 name / language / gender 匹配 —— 按显示名过滤会得到 0 条
    * （下拉看不到任何备选）或 1 条（只能选到当前音色本身）。只有用户真正键入的文本
-   * 才是搜索词，由 input 事件处理；空搜索词即展示全部备选，与 content 侧一致。
+   * 才是搜索词，由 input 事件处理。
+   *
+   * 默认视图按已选音色的语言收窄（filterVoices 的 filterByLanguage）：后端中转
+   * （Edge）目录有几百个音色，全量铺开时中文会落在 100 条截断之外而不可见。
+   * 已选音色为空时仍展示全部语言。
    */
-  function showAllVoicesOnOpen(): void {
+  function showVoicesOnOpen(): void {
     if (state.allVoices.length === 0) return;
-    filterVoices('');
+    filterVoices('', !!state.selectedVoice);
     voiceDropdown.classList.remove('hidden');
   }
 
   voiceSearchInput.addEventListener('focus', () => {
-    showAllVoicesOnOpen();
+    showVoicesOnOpen();
   });
 
   voiceSearchInput.addEventListener('click', () => {
-    showAllVoicesOnOpen();
+    showVoicesOnOpen();
   });
 
   // Close dropdown when clicking outside
